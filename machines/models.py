@@ -3,8 +3,6 @@
 from django.db import models
 from django    import forms
 
-from smart_selects.db_fields import ChainedForeignKey
-
 DAYS_CHOICES = (
     ('1','Domingo'),
     ('2','Segunda'),

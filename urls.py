@@ -6,15 +6,15 @@ admin.autodiscover()
 
 urlpatterns = patterns('',
     # Examples:
-    # url(r'^$', 'tbbackup.views.home', name='home'),
-    # url(r'^tbbackup/', include('tbbackup.foo.urls')),
+    # url(r'^$', 'tbackup.views.home', name='home'),
+    # url(r'^tbackup/', include('tbackup.foo.urls')),
 
     # Uncomment the admin/doc line below to enable admin documentation:
     #url(r'^admin/doc/', include('django.contrib.admindocs.urls')),
 
     # Uncomment the next line to enable the admin:
     url(r'^admin/', include(admin.site.urls)),
-    url(r'^logs/', 'tbbackup.logs.views.index'),
-    url(r'^machines/', 'tbbackup.machines.views.index'),
-    url(r'^chaining/',include('smart_selects.urls')),
+    url(r'^logs/', 'tbackup.logs.views.index'),
+    url(r'^machines/', 'tbackup.machines.views.index'),
+    #url(r'^usermachines/', 'tbackup.usermachines.views.index'),
 )

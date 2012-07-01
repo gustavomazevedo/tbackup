@@ -9,17 +9,17 @@ ADMINS = (
 
 MANAGERS = ADMINS
 
-DATA_ROOT = '/home/gustavo/data/tbbackup/'
-DJANGO_SITE_ROOT = '/home/gustavo/tb/tbbackup/'
-LOGIN_URL = '/tbbackup/accounts/login/'
-SITE_ROOT = '/~gustavo/tbbackup/'
+DATA_ROOT = '/home/gustavo/data/tbackup/'
+DJANGO_SITE_ROOT = '/home/gustavo/tb/tbackup/'
+LOGIN_URL = '/tbackup/accounts/login/'
+SITE_ROOT = '/~gustavo/tbackup/'
 
 
 
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3', # Add 'postgresql_psycopg2', 'postgresql', 'mysql', 'sqlite3' or 'oracle'.
-        'NAME': DATA_ROOT + 'tbbackup.sqlite',                      # Or path to database file if using sqlite3.
+        'NAME': DATA_ROOT + 'tbackup.sqlite',                      # Or path to database file if using sqlite3.
         'USER': '',                      # Not used with sqlite3.
         'PASSWORD': '',                  # Not used with sqlite3.
         'HOST': '',                      # Set to empty string for localhost. Not used with sqlite3.
@@ -63,15 +63,12 @@ MEDIA_URL = SITE_ROOT + 'custom-media/'
 # Don't put anything in this directory yourself; store your static files
 # in apps' "static/" subdirectories and in STATICFILES_DIRS.
 # Example: "/home/media/media.lawrence.com/static/"
-STATIC_ROOT = ''
+STATIC_ROOT = '/home/gustavo/public_html/tbackup/media/'
 
 # URL prefix for static files.
 # Example: "http://media.lawrence.com/static/"
-STATIC_URL = '/static/'
+STATIC_URL = SITE_ROOT + 'media/'
 
-# URL prefix for admin static files -- CSS, JavaScript and images.
-# Make sure to use a trailing slash.
-# Examples: "http://foo.com/static/admin/", "/static/admin/".
 ADMIN_MEDIA_PREFIX = SITE_ROOT + 'media/'
 
 # Additional locations of static files
@@ -124,9 +121,8 @@ INSTALLED_APPS = (
     'django.contrib.sites',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'tbbackup.logs',
-    'tbbackup.machines',
-    'smart_selects',
+    'tbackup.logs',
+    'tbackup.usermachines',
     # Uncomment the next line to enable the admin:
     'django.contrib.admin',
     # Uncomment the next line to enable admin documentation:

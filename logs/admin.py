@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from tbbackup.logs.models import LogHistory, ArquivoBackup
+from tbackup.logs.models import LogHistory, ArquivoBackup
 
 class LogHistoryAdmin(admin.ModelAdmin):
 	fields = ('arquivos','status', 'data')

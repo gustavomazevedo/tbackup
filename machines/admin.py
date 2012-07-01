@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from tbbackup.machines.models import Origin, Destination, Transfer, OriginForm, DestinationForm, TransferForm
+from tbackup.machines.models import Origin, Destination, Transfer, OriginForm, DestinationForm, TransferForm
 
 class MachineAdmin(admin.ModelAdmin):
     list_filter   = ('nome','user')
@@ -12,7 +12,7 @@ class OriginAdmin(MachineAdmin):
 class DestinationAdmin(admin.ModelAdmin):
     form = DestinationForm
     #fields = ('nome','user', 'dirs','endereco','porta')
-    
+
 class TransferAdmin(admin.ModelAdmin):
     form = TransferForm
     #fields = ('origin','origin_dir','destination','destination_dir','horario')

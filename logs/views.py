@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from django.shortcuts import render_to_response
-from tbbackup.logs.models import LogHistory, ArquivoBackup
+from tbackup.logs.models import LogHistory, ArquivoBackup
 import os
 
 
