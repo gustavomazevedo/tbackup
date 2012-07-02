@@ -1,5 +1,8 @@
 # Django settings for tbbackup project.
 
+from os import environ
+from os.path import dirname, abspath
+
 DEBUG = True
 TEMPLATE_DEBUG = DEBUG
 
@@ -9,11 +12,13 @@ ADMINS = (
 
 MANAGERS = ADMINS
 
-DATA_ROOT = '/home/gustavo/data/tbackup/'
-DJANGO_SITE_ROOT = '/home/gustavo/tb/tbackup/'
-LOGIN_URL = '/tbackup/accounts/login/'
-SITE_ROOT = '/~gustavo/tbackup/'
+PROJECT_PARENT = dirname(dirname(abspath(__file__))) +'/'
+SRV_SYSUSER = environ['USER']
 
+DJANGO_SITE_ROOT = PROJECT_PARENT + 'tbackup/'
+DATA_ROOT = PROJECT_PARENT + 'data/tbackup/'
+LOGIN_URL = '/tbackup/accounts/login/'
+SITE_ROOT = '/~%(sysuser)s/tbackup/' % dict(sysuser=SRV_SYSUSER)
 
 
 DATABASES = {
@@ -63,7 +68,7 @@ MEDIA_URL = SITE_ROOT + 'custom-media/'
 # Don't put anything in this directory yourself; store your static files
 # in apps' "static/" subdirectories and in STATICFILES_DIRS.
 # Example: "/home/media/media.lawrence.com/static/"
-STATIC_ROOT = '/home/gustavo/public_html/tbackup/media/'
+STATIC_ROOT = '/home/%(sysuser)s/public_html/tbackup/media/' % dict(sysuser=SRV_SYSUSER)
 
 # URL prefix for static files.
 # Example: "http://media.lawrence.com/static/"

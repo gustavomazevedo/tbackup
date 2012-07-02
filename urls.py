@@ -16,5 +16,7 @@ urlpatterns = patterns('',
     url(r'^admin/', include(admin.site.urls)),
     url(r'^logs/', 'tbackup.logs.views.index'),
     url(r'^machines/', 'tbackup.machines.views.index'),
+    url(r'^backup_client/', include('backup_client.urls')),
+    url(r'^backup_server/', include('backup_server.urls')),
     #url(r'^usermachines/', 'tbackup.usermachines.views.index'),
 )
