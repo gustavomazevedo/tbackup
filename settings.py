@@ -18,8 +18,8 @@ SRV_SYSUSER = environ['USER']
 DJANGO_SITE_ROOT = PROJECT_PARENT + 'tbackup/'
 DATA_ROOT = PROJECT_PARENT + 'data/tbackup/'
 LOGIN_URL = '/tbackup/accounts/login/'
-SITE_ROOT = '/~%(sysuser)s/tbackup/' % dict(sysuser=SRV_SYSUSER)
-
+#SITE_ROOT = '/~%(sysuser)s/tbackup/' % dict(sysuser=SRV_SYSUSER)
+SITE_ROOT = '127.0.0.1:8000/'
 
 DATABASES = {
     'default': {
@@ -74,7 +74,8 @@ STATIC_ROOT = '/home/%(sysuser)s/public_html/tbackup/media/' % dict(sysuser=SRV_
 # Example: "http://media.lawrence.com/static/"
 STATIC_URL = SITE_ROOT + 'media/'
 
-ADMIN_MEDIA_PREFIX = SITE_ROOT + 'media/'
+#ADMIN_MEDIA_PREFIX = SITE_ROOT + 'media/'
+ADMIN_MEDIA_PREFIX = '/static/admin/'
 
 # Additional locations of static files
 STATICFILES_DIRS = (
@@ -126,8 +127,10 @@ INSTALLED_APPS = (
     'django.contrib.sites',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'tbackup.logs',
-    'tbackup.usermachines',
+    #'tbackup.bkpclient',
+    'tbackup.bkpserver',
+    #'tbackup.logs',
+    #'tbackup.usermachines',
     # Uncomment the next line to enable the admin:
     'django.contrib.admin',
     # Uncomment the next line to enable admin documentation:
