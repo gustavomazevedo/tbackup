@@ -7,8 +7,8 @@ import subprocess
 import gzip
 from datetime import datetime, timedelta
 from django.core.management.base import BaseCommand, CommandError
-from bkpclient.models import Server
-import bkpclient as bc
+from bkpagent.models import Server
+import bkpagent as bc
 
 projectdir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))) + '/'
 sys.path.insert(0,projectdir)
@@ -25,7 +25,7 @@ class Command(BaseCommand):
     def handle(self):
         dumpdatetime = str(datetime.now()).replace(' ','_').replace(':','-')
         dumpdatetime = dumpdatetime[:dumpdatetime.rfind('.')]
-        self.dumppath = '%sbkpclient/dumps/%s.%s.json' % 
+        self.dumppath = '%sbkpagent/dumps/%s.%s.json' % 
                (projectdir,projectname,dumpdatetime)
         self.zippath = self.dumppath.replace('.json','db.gz')
         
@@ -51,9 +51,9 @@ class Command(BaseCommand):
 def dumpdata():
     manage = projectdir + 'manage.py'
     installed_apps = getattr(settings,'INSTALLED_APPS')
-    apps = ' '.join([a if not a.endswith('bkpclient') for a in installed_apps])
+    apps = ' '.join([a if not a.endswith('bkpagent') for a in installed_apps])
 #    for a in installed_apps:
-#        apps += ' ' + a if not a.endswith('bkpclient')
+#        apps += ' ' + a if not a.endswith('bkpagent')
     
     cmd = '/usr/bin/python %s dumpdata %s > %s' %
           (manage,apps,self.dumppath)
