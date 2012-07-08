@@ -51,7 +51,7 @@ class Command(BaseCommand):
 def dumpdata():
     manage = projectdir + 'manage.py'
     installed_apps = getattr(settings,'INSTALLED_APPS')
-    apps = ' '.join([a if not a.endswith('bkpagent') for a in installed_apps])
+    apps = ' '.join([a if not [a.endswith('bkpagent') or a.startswith('django')] for a in installed_apps])
 #    for a in installed_apps:
 #        apps += ' ' + a if not a.endswith('bkpagent')
     
