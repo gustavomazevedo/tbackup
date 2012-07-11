@@ -7,8 +7,12 @@ import subprocess
 import gzip
 from datetime import datetime, timedelta
 from django.core.management.base import BaseCommand, CommandError
-from bkpagent.models import Server
+
+import simplejson as json
 import bkpagent as bc
+from bkpagent.models import Server, BackupHistory
+
+
 
 projectdir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))) + '/'
 sys.path.insert(0,projectdir)
@@ -16,8 +20,7 @@ import settings
 projectname = projectdir.split('/')[-2]
 
 NO_CHANGES = 0
-RESET = 1
-
+NO_BACKUP = 1
 
 class Command(BaseCommand):
     help = 'Updates configuration file and sets up backup jobs'
@@ -29,24 +32,29 @@ class Command(BaseCommand):
                (projectdir,projectname,dumpdatetime)
         self.zippath = self.dumppath.replace('.json','db.gz')
         
-        try:
-            configfile = configure()
-        except e:
-            raise CommandError('Could not connect to server')
+        configfile = configure()
 
-        if not (configpath in (NO_CHANGES,RESET)):
-            dt = datetime.now()
-            dt -= timedelta(seconds=dt.second, microseconds=dt.microsecond)
+        if not (configfile in (NO_CHANGES,NO_BACKUP)):
+            now = datetime.now()
             backup_configs = json.load(open(configfile))
-            
             dumped = False
+
             for bconf in backup_configs:
-                primeirobkp = datetime.strptime(bconf['primeirobkp'],'%d/%m/%y %H:%M')
+                destino = bconf['nome_destino']
                 periodicidade = int(bconf['periodicidade'])
-                delta = dt - primeirobkp
-                if bc.to_minutes(delta) % periodicidade == 0:
-                    dumped = dumpdata() if dumped == False
-                    execute_backup(bconf)
+                horario = int(bconf['horario'])
+                last_backup = BackupHistory.objects.latest().dump_date
+                delta = now - last_backup            
+
+                if delta.days >= periodicidade and now.hour >= horario:
+                   dumped = dumpdata() if dumped == False
+                   execute_backup(bconf)
+                   b = BackupHistory.objects.create(dump_date=now)
+                   b.destination = destino
+                   b.successfull = transfer_backup(bconf)
+                   b.save()
+
+           
 
 def dumpdata():
     manage = projectdir + 'manage.py'
@@ -57,7 +65,7 @@ def dumpdata():
     
     cmd = '/usr/bin/python %s dumpdata %s > %s' %
           (manage,apps,self.dumppath)
-    stdout, stderr = bc.process(cmd)
+    stdout, stderr = ba.process(cmd)
     print stderr
     print stdout
     if stderr:
@@ -73,8 +81,8 @@ def execute_backup(bconf):
     f_in.delete()
     
     cmd = '/usr/bin/rsync ssh -p %s -avz %s %s:%s' %
-          (bconf['port'],self.zippath,bconf['destination'],bconf['dir'])
-    stdout, stderr = bc.process(cmd)
+          (bconf['port'],self.zippath,bconf['destino'],bconf['dir'])
+    stdout, stderr = ba.process(cmd)
     print stderr
     print stdout
     #filenamesLog = stdout.split('\n')[1:-4]
@@ -93,19 +101,18 @@ def configure():
     if transfered is None:
         return NO_CHANGES
     if "deleting" in transfered:
-        #Backup.objects.all().delete()
-        return RESET
+        return NO_BACKUP
     
-    return bc.CONFIG_PATH + transfered  
+    return ba.CONFIG_PATH + transfered  
 
 def get_config_file()
     try:
         server = Server.objects.get(pk=1)
     except Server.DoesNotExist:
-        server = bc.setup_server()
+        server = ba.setup_server()
     cmd = '/usr/bin/rsync -e "ssh -p %s -l %s" -avz --delete-excluded %s %s' %
-          (server.port,server.user,server.configpath,bc.CONFIG_PATH)
-    stdout, stderr = bc.process(cmd)
+          (server.port,server.user,server.configpath,ba.CONFIG_PATH)
+    stdout, stderr = ba.process(cmd)
     print stderr
     print stdout
     if stderr:
