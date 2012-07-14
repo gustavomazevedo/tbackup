@@ -7,8 +7,8 @@ import subprocess
 import gzip
 from datetime import datetime, timedelta
 from django.core.management.base import BaseCommand, CommandError
+from django.utils import simplejson as json
 
-import simplejson as json
 import bkpagent as bc
 from bkpagent.models import Server, BackupHistory
 
@@ -24,14 +24,14 @@ NO_BACKUP = 1
 
 class Command(BaseCommand):
     help = 'Updates configuration file and sets up backup jobs'
-    
+
     def handle(self):
         dumpdatetime = str(datetime.now()).replace(' ','_').replace(':','-')
         dumpdatetime = dumpdatetime[:dumpdatetime.rfind('.')]
         self.dumppath = '%sbkpagent/dumps/%s.%s.json' % 
                (projectdir,projectname,dumpdatetime)
         self.zippath = self.dumppath.replace('.json','db.gz')
-        
+
         configfile = configure()
 
         if not (configfile in (NO_CHANGES,NO_BACKUP)):
@@ -44,17 +44,17 @@ class Command(BaseCommand):
                 periodicidade = int(bconf['periodicidade'])
                 horario = int(bconf['horario'])
                 last_backup = BackupHistory.objects.latest().dump_date
-                delta = now - last_backup            
+                delta = now - last_backup
 
                 if delta.days >= periodicidade and now.hour >= horario:
-                   dumped = dumpdata() if dumped == False
-                   execute_backup(bconf)
-                   b = BackupHistory.objects.create(dump_date=now)
-                   b.destination = destino
-                   b.successfull = transfer_backup(bconf)
-                   b.save()
+                    dumped = dumpdata() if dumped == False
+                    execute_backup(bconf)
+                    b = BackupHistory.objects.create(dump_date=now)
+                    b.destination = destino
+                    b.successfull = transfer_backup(bconf)
+                    b.save()
 
-           
+
 
 def dumpdata():
     manage = projectdir + 'manage.py'

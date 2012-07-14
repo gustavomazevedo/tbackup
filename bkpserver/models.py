@@ -7,7 +7,6 @@ PERIODICIDADE_CHOICES = (
     ('w','semanas'),
     ('d','dias'),
     ('H','horas'),
-    ('M','minutos')
 )
 
 class Maquina(models.Model):
