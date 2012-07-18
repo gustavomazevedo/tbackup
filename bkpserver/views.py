@@ -1,25 +1,51 @@
 # -*- coding: utf-8 -*-
+import os.path
+import sys
 
 from django.views.decorators.csrf import csrf_exempt
 from django.shortcuts import render_to_response
-from bkpserver.models import Client
+from django.http import HttpResponse
+from django.utils import simplejson
 
+from bkpserver.models import Origin
 
-OK = 0
+projectdir = os.path.dirname(os.path.dirname(__file__)) + '/'
+sys.path.insert(0,projectdir)
+import settings
 
 @csrf_exempt
 def register(request):
     if request.method == POST:
         try:
-            client = Client.objects.get(name=request.POST['name'])
+            origin = Origin.objects.get(name=request.POST['name'])
             #nome já existe, peça para tentar de novo com outro nome
-            return HttpResponse()
-        except Sistema.DoesNotExist:
-            client = Client.objects.create(name=request.POST['name'])
+            error = {
+                'ERROR' : {
+                    'message' : u'Este nome já está cadastrado no sistema.',
+                }
+            }
+            return HttpResponse(simplejson.dumps(error), mimetype="text/javascript")
+        except Origin.DoesNotExist:
+            origin = Origin.objects.create(
+                name=request.POST['name'], 
+                sshkey=request.POST['sshkey']
+            )
         
-        client.sshkey = request.POST['sshkey']    
-        return OK
-    return render_to_response()
+        print origin.name
+        print origin.sshkey
+        origin.save()
+
+        header = getattr(settings, 'HEADER_CONFIG_FILE')
+        return HttpResponse(simplejson.dumps(header), mimetype="text/javascript")        
+    return HttpResponseBadRequest()
+
+@csrf_exempt
+def get_header(request):
+    if request.method == GET:
+        header = getattr(settings, 'HEADER_CONFIG_FILE')
+        return HttpResponse(simplejson.dumps(header), mimetype="text/javascript")
+    return HttpResponseBadRequest()
+    
 
 #def get_config_file(request,machine_id):
 #    if request.method == GET:

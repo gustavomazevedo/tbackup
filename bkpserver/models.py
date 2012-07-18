@@ -1,92 +1,117 @@
 # -*- coding: utf-8 -*-
 
 from django.db import models
+from django import forms
+from django.forms import widgets
 
-PERIODICIDADE_CHOICES = (
-    ('m','meses'),
-    ('w','semanas'),
+TIMEDELTA_CHOICES = (
+    ('h','horas'),
     ('d','dias'),
-    ('H','horas'),
+    ('s','semanas'),
+    ('q','quinzenas'),
 )
 
-class Maquina(models.Model):
-    nome     = models.CharField(max_length=256)
-    endereco = models.CharField(verbose_name = u'Endereço',max_length=256, blank=True)
-    porta    = models.CharField(max_length=5, blank=True)
+class Origin(models.Model):
+    u"""
+        name = nome específico da origem
+        hostname = nome da máquina cadastrada (para distinguir 2 cadastros com nome igual)
+        username = nome do usuário que cadastrou (também para distinção, de forma user-friendly)
+    """
+    name = models.CharField(max_length=80, verbose_name='nome')
+    hostname = models.CharField(max_length=80, verbose_name=u'nome da máquina')
+    username = models.CharField(max_length=80, verbose_name=u'nome do usuário')
+    sshkey = models.TextField(verbose_name='chave ssh')
     
     class Meta:
-        verbose_name = u'Máquina'
-        ordering = ['nome']
-
+        verbose_name = 'origem'
+        verbose_name_plural = 'origens'
+        ordering = ['name']
+    
     def __unicode__(self):
-        return getattr(self, 'nome')
-        
-class Diretorio(models.Model):
-    maquina = models.ForeignKey(Maquina)
-    caminho = models.CharField(max_length=1024)
+        return self.name
 
+class Destination(models.Model):
+    u"""
+        name = nome específico do destino. Padrão preferível: "Projeto - Máquina" (ex.: "Sapem - Gruyere")
+        full_address = endereço completo de destino (<user>@<address>:<dir>)
+        port = porta aberta para acesso SSH
+    """
+    name = models.CharField(max_length=80, verbose_name='nome')
+    full_address = models.CharField(max_length=512, verbose_name=u'endereço')
+    port = models.CharField(max_length=5, verbose_name='porta')
+    
     class Meta:
-        verbose_name =u'Diretório'
-        ordering = ['caminho']
-        
+        verbose_name = 'servidor'
+        verbose_name_plural = 'servidores'
+        ordering = ['name']
+    
     def __unicode__(self):
-        return getattr(self,'caminho')
+        return self.name
 
-class Usuario(models.Model):
-    maquina = models.ForeignKey(Maquina)
-    nome    = models.CharField(max_length=50, verbose_name = u'Nome de usuário')
-
+class Transfer(models.Model):
+    u"""
+        par único:
+        (
+        origin = máquina de origem
+        destination = servidor de backup de destino
+        )
+        delta = periodicidade do backup   
+            
+    """
+    origin = models.ForeignKey(Origin, verbose_name='origem')
+    destination = models.ForeignKey(Destination, verbose_name='destino')
+    delta = models.CharField(max_length=6, verbose_name='periodicidade')
+    #delta_type = models.CharField(max_length=1,choices=TIMEDELTA_CHOICES)
+    
     class Meta:
-        verbose_name = u'Usuário'
-
+        verbose_name = u'transferência'
+        ordering = ['origin__name','destination__name']
+    
     def __unicode__(self):
-        return getattr(self,'nome')
-
-class Credencial(models.Model):
-    maquina   = models.ForeignKey(Maquina)
-    usuario   = models.ForeignKey(Usuario)
-    chave_ssh = models.TextField(verbose_name=u'Chave SSH', blank=True)
-
-    class Meta:
-        verbose_name = u'Credencial'    
-        verbose_name_plural = u'Credenciais'
-                
-    def __unicode__(self):
-        return getattr(self,'usuario') + '@' + getattr(self,'maquina')
+        return self.origin.name + " => " + self.destination.name
         
-class Transferencia(models.Model):
-    origem = models.ForeignKey(Credencial, related_name='transferencia_origem_set')
-    origem_dir = models.FilePathField(max_length=1024)
-    destino = models.ForeignKey(Credencial, related_name='transferencia_destino_set')
-    destino_dir = models.FilePathField(max_length=1024)
-    primeirobkp = models.DateTimeField()
-    periodicidade = models.BigIntegerField()
-    period_tipo = models.CharField(max_length=1, choices=PERIODICIDADE_CHOICES)
-
-    class Meta:
-        verbose_name = 'Transferência'
-
-        
-        
-"""
-class OriginForm(forms.ModelForm):
-    nome = forms.CharField(max_length=256)
-    user = forms.CharField(max_length=256)
-    dirs = forms.CharField(widget=forms.Textarea, help_text=u'digitar cada diretório em uma nova linha')
-    sshkey = forms.CharField(widget=forms.Textarea, label='Chave SSH', help_text = u'Chave para acesso remoto localizada em ~/.ssh/id_rsa.pub')
-
-    class Meta:
-        model = Origin
-
 class DestinationForm(forms.ModelForm):
-    nome = forms.CharField(required=True, max_length=256)
-    user = forms.CharField(required=True, max_length=256)
-    dirs = forms.CharField(required=True, widget=forms.Textarea, help_text=u'digitar cada diretório em uma nova linha')
-    endereco = forms.CharField(required=True, label=u'Endereço',max_length=256)
-    porta = forms.CharField(required=True, max_length=4)
-
     class Meta:
         model = Destination
-"""
+
+class TimedeltaWidget(widgets.MultiWidget):
+    def __init__(self, attrs=None):
+        widget = (
+            widgets.TextInput(attrs={'size': 3, 'maxlength': 3}),
+            widgets.Select(choices=TIMEDELTA_CHOICES),
+            )
+        super(TimedeltaWidget, self).__init__(widget, attrs=attrs)
+        
+    def decompress(self, value):
+        if value:
+            return [value[:-1], value[-1]]
+        return [None, None]
+    
+    def format_output(self, rendered_widgets):
+        return u''.join(rendered_widgets)
+
+class TimedeltaFormField(forms.MultiValueField):
+    widget = TimedeltaWidget
+    
+    def __init__(self, *args, **kwargs):
+        fields = (
+            forms.IntegerField(),
+            forms.ChoiceField(choices=TIMEDELTA_CHOICES),
+        )
+        super(TimedeltaFormField, self).__init__(fields, *args, **kwargs)
+    
+    def compress(self, data_list):
+        if data_list:
+            return str(data_list[0]) + data_list[1]
+        return ''
+
+        
+class TransferForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        super(TransferForm, self).__init__(*args, **kwargs)
+        self.fields['delta'] = TimedeltaFormField(label=self.fields['delta'].label,*args, **kwargs)
+
+    class Meta:
+        model = Transfer
 
 

@@ -10,6 +10,15 @@ ADMINS = (
      ('Gustavo Miranda de Azevedo', 'gustavo.m.azevedo@poli.ufrj.br'),
 )
 
+HEADER_CONFIG_FILE = {
+    'header': {
+        'srvtbackup_name' : 'Gruyere - LPS',
+        'srvtbackup_address' : 'gustavo@gruyere.lps.ufrj.br',
+        'admins' : ADMINS,
+        'config_path': '~/tb/tbackup/configs/{origin_name}.cfg',
+    }
+}
+
 MANAGERS = ADMINS
 
 PROJECT_PARENT = dirname(dirname(abspath(__file__))) +'/'
@@ -18,8 +27,8 @@ SRV_SYSUSER = environ['USER']
 DJANGO_SITE_ROOT = PROJECT_PARENT + 'tbackup/'
 DATA_ROOT = PROJECT_PARENT + 'data/tbackup/'
 LOGIN_URL = '/tbackup/accounts/login/'
-SITE_ROOT = '/~%(sysuser)s/tbackup/' % dict(sysuser=SRV_SYSUSER)
-#SITE_ROOT = '127.0.0.1:8000/'
+#SITE_ROOT = '/~%(sysuser)s/tbackup/' % dict(sysuser=SRV_SYSUSER)
+SITE_ROOT = '127.0.0.1:8000/'
 
 DATABASES = {
     'default': {
@@ -57,22 +66,26 @@ USE_L10N = True
 
 # Absolute filesystem path to the directory that will hold user-uploaded files.
 # Example: "/home/media/media.lawrence.com/media/"
-MEDIA_ROOT = DATA_ROOT
+#MEDIA_ROOT = DATA_ROOT
+MEDIA_ROOT = ''
 
 # URL that handles the media served from MEDIA_ROOT. Make sure to use a
 # trailing slash.
 # Examples: "http://media.lawrence.com/media/", "http://example.com/media/"
-MEDIA_URL = SITE_ROOT + 'custom-media/'
+#MEDIA_URL = SITE_ROOT + 'custom-media/'
+MEDIA_URL = ''
 
 # Absolute path to the directory static files should be collected to.
 # Don't put anything in this directory yourself; store your static files
 # in apps' "static/" subdirectories and in STATICFILES_DIRS.
 # Example: "/home/media/media.lawrence.com/static/"
-STATIC_ROOT = '/home/%(sysuser)s/public_html/tbackup/media/' % dict(sysuser=SRV_SYSUSER)
+#STATIC_ROOT = '/home/%(sysuser)s/public_html/tbackup/media/' % dict(sysuser=SRV_SYSUSER)
+STATIC_ROOT = ''
 
 # URL prefix for static files.
 # Example: "http://media.lawrence.com/static/"
-STATIC_URL = SITE_ROOT + 'media/'
+#STATIC_URL = SITE_ROOT + 'media/'
+STATIC_URL = '/static/'
 
 #ADMIN_MEDIA_PREFIX = SITE_ROOT + 'media/'
 ADMIN_MEDIA_PREFIX = '/static/admin/'
@@ -128,7 +141,7 @@ INSTALLED_APPS = (
     'django.contrib.messages',
     'django.contrib.staticfiles',
     #'bkpagent',
-    #'bkpserver',
+    'bkpserver',
     #'logs',
     #'usermachines',
     # Uncomment the next line to enable the admin:

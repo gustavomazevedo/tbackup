@@ -8,6 +8,7 @@ admin.autodiscover()
 
 urlpatterns = patterns('bkpserver.views',
     url(r'^register/$', 'register'),
+    url(r'^get_header/$', 'get_header'),
 #    url(r'^config/(?P<machine_id>)/$', 'get_config_file'),
 #    url(r'^log/(?P<machine_id>)/$', 'post_log'),
 )
