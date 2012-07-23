@@ -14,12 +14,8 @@ TIMEDELTA_CHOICES = (
 class Origin(models.Model):
     u"""
         name = nome específico da origem
-        hostname = nome da máquina cadastrada (para distinguir 2 cadastros com nome igual)
-        username = nome do usuário que cadastrou (também para distinção, de forma user-friendly)
     """
     name = models.CharField(max_length=80, verbose_name='nome')
-    hostname = models.CharField(max_length=80, verbose_name=u'nome da máquina')
-    username = models.CharField(max_length=80, verbose_name=u'nome do usuário')
     sshkey = models.TextField(verbose_name='chave ssh')
     
     class Meta:
@@ -70,6 +66,20 @@ class Transfer(models.Model):
     def __unicode__(self):
         return self.origin.name + " => " + self.destination.name
         
+class BackupHistory(models.Model):
+    origin = models.ForeignKey(Origin)
+    dump_date = models.DateTimeField(verbose_name='data')
+    files = models.TextField(verbose_name='arquivos')
+    destination = models.CharField(verbose_name='destino')
+    successful = models.BooleanField(verbose_name='status')
+    
+    class Meta:
+        verbose_name = u'histórico'
+        ordering = ['origin__name','-dump_date']
+        
+#    def __unicode__(self):
+#        return self.origin.name + ""
+      
 class DestinationForm(forms.ModelForm):
     class Meta:
         model = Destination

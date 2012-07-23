@@ -13,10 +13,11 @@ import bkpagent as bc
 from bkpagent.models import Server, BackupHistory
 
 
-projectdir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))) + '/'
-sys.path.insert(0,projectdir)
-import settings
-projectname = projectdir.split('/')[-2]
+#projectdir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))) + '/'
+#sys.path.insert(0,projectdir)
+from django.conf import settings
+#projectname = projectdir.split('/')[-2]
+
 
 NO_CHANGES = 0
 NO_BACKUP = 1
@@ -57,7 +58,7 @@ class Command(BaseCommand):
 
 def dumpdata():
     manage = projectdir + 'manage.py'
-    installed_apps = getattr(settings,'INSTALLED_APPS')
+    installed_apps = settings.INSTALLED_APPS
     apps = ' '.join([a if not [a.endswith('bkpagent') or a.startswith('django')] for a in installed_apps])
 #    for a in installed_apps:
 #        apps += ' ' + a if not a.endswith('bkpagent')

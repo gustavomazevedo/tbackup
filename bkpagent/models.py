@@ -13,4 +13,10 @@ class BackupHistory(models.Model):
     files = models.TextField(verbose_name='arquivos')
     destination = models.CharField(verbose_name='destino')
     successful = models.BooleanField(verbose_name='status')
+    
+    class Meta:
+        verbose_name = u'histórico'
+        
+    def __unicode__(self):
+        return str(self.dump_date)
 
