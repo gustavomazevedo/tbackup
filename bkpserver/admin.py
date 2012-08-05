@@ -1,30 +1,15 @@
-import os.path
-import sys
+# -*- coding: utf-8 -*-
 
 from django.contrib import admin
-
-#from django.core import serializers
-#from django.http import HttpResponse, HttpResponseBadRequest
-
-from django.utils import simplejson
+from django.utils import simplejson as json
 
 from bkpserver.models import Origin, Destination, Transfer, DestinationForm, TransferForm
-#from bkpserver.forms import DestinationForm, TransferForm
 
-projectdir = os.path.dirname(os.path.dirname(__file__)) + '/'
-sys.path.insert(0,projectdir)
-import settings
-
-HOURS_MULTIPLIER = {
-    'h': 1,
-    'd': 24,
-    's': 168,
-    'q': 360,
-}
+from . import header, HEADER_CONFIG_FILE
 
 class OriginAdmin(admin.ModelAdmin):
     exclude = ('sshkey',)
-    list_filter =('name','hostname','username',)
+    list_filter =('name',)
     
     def has_add_permission(self, request):
         return False
@@ -42,15 +27,17 @@ class TransferAdmin(admin.ModelAdmin):
     def save_model(self, request, obj, form, change):
         obj.save()
         make_config_file(obj.origin__name)
+        authorize_key(obj.origin)
 
 def make_config_file(origin_name):
     config = []
-    header = getattr(settings, 'HEADER_CONFIG_FILE')
-    header['header']['config_path'] = header['header']['config_path'].replace('{origin_name}',origin_name)
-    config.append(header)
-    tranfers = Transfer.objects.get(origin__name=origin_name)
+    header_dict = header(origin_name)
+    config.append(header_dict)
+    
     time = datetime.now()
     time -= timedelta(minutes=time.minute, seconds=time.second, microseconds=time.microseconds)
+    
+    tranfers = Transfer.objects.get(origin__name=origin_name)
     for t in transfers:
         d = t.destination
         c = {
@@ -62,10 +49,13 @@ def make_config_file(origin_name):
             }
         }
         config.append(c)
-    cf = simplejson.dumps(config)
-    f = open(header['header']['config_path'],'w')
+    cf = json.dumps(config)
+    f = open(header_dict['header']['cfg_path'],'w')
     f.write(cf + '\n')
     f.close()
+
+def authorize_key(pk):
+    
 
 def parse_delta(delta):
     if delta[-1] == 'h':
@@ -81,7 +71,6 @@ def parse_delta(delta):
         return str(fortnights * 15) + 'd'
     
     
-
 admin.site.register(Origin, OriginAdmin)
 admin.site.register(Destination, DestinationAdmin)
 admin.site.register(Transfer, TransferAdmin)

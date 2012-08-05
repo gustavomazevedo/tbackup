@@ -6,8 +6,8 @@ from django.conf.urls.defaults import patterns, include, url
 from django.contrib import admin
 admin.autodiscover()
 
-urlpatterns = patterns('bkpserver.views',
-    url(r'^register/$', 'register'),
-    url(r'^get_header/$', 'get_header'),
-    url(r'^log/(?P<machine_id>)/$', 'post_log'),
+urlpatterns = patterns('bkpagent.views',
+    url(r'^register/$', 'register_to_server'),
+    #url(r'^get_header/$', 'get_header'),
+    #url(r'^log/(?P<machine_id>)/$', 'post_log'),
 )

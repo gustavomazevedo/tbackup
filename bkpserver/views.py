@@ -1,59 +1,56 @@
 # -*- coding: utf-8 -*-
 import os.path
-import sys
+from datetime import datetime
 
+from django.http import HttpResponse, HttpResponseBadRequest
+from django.template.defaultfilters import slugify
+from django.utils import simplejson as json
 from django.views.decorators.csrf import csrf_exempt
-from django.shortcuts import render_to_response
-from django.http import HttpResponse
-from django.utils import simplejson
 
-from bkpserver.models import Origin
+from bkpserver.models import Origin, BackupHistory
 
-#projectdir = os.path.dirname(os.path.dirname(__file__)) + '/'
-#sys.path.insert(0,projectdir)
-from django.conf import settings
+from . import header, HEADER_CONFIG_FILE
 
+#Registra a máquina remota no servidor
 @csrf_exempt
 def register(request):
     if request.method == 'POST':
         try:
-            origin = Origin.objects.get(name=request.POST['name'])
+            origin = Origin.objects.get(name=request.POST['origin_name'])
             #nome já existe, peça para tentar de novo com outro nome
-            error = { 'ERROR' : { 'message' : u'Este nome já está cadastrado no sistema.', } }
-            return HttpResponse(simplejson.dumps(error), mimetype="text/javascript")
+            error = { 
+                'error' : { 
+                    'message' : u'Este nome já está cadastrado no sistema. Por favor, escolha um novo nome.', 
+                } 
+            }
+            return HttpResponse(json.dumps(error), mimetype="text/javascript")
         except Origin.DoesNotExist:
             try:
-                origin = Origin.objects.create(name=request.POST['name'],sshkey=request.POST['sshkey'])
+                origin = Origin.objects.create(
+                    name=request.POST['origin_name'],
+                    sshkey=request.POST['origin_sshkey'],
+                    slug=slugify(request.POST['origin_name']))
             except:
-                error = { 'ERROR' : { 'message' : u'Dados inválidos', } }
-                return HttpResponse(simplejson.dumps(error), mimetype="text/javascript")
+                error = { 'error' : { 'message' : u'Dados inválidos', } }
+                return HttpResponse(json.dumps(error), mimetype="text/javascript")
         
-        print origin.name
-        print origin.sshkey
-        origin.save()
-
-        header = getattr(settings, 'HEADER_CONFIG_FILE')
-        header['header']['config_path'] = header['header']['config_path'].replace('{origin_name}',origin_name)
-        return HttpResponse(simplejson.dumps(header), mimetype="text/javascript")        
+        return HttpResponse(json.dumps(header(origin.name)), mimetype="text/javascript")        
     return HttpResponseBadRequest()
 
+#Responde ao pedido de cabeçalho
 @csrf_exempt
 def get_header(request):
     if request.method == 'GET':
-        return HttpResponse(simplejson.dumps(header(origin_name)), mimetype="text/javascript")
+        return HttpResponse(json.dumps(header(request.POST['origin_name'])), mimetype="text/javascript")
     return HttpResponseBadRequest()
 
-def header(origin_name):
-    h = getattr(settings, 'HEADER_CONFIG_FILE')
-    return h['header']['config_path'].replace('{origin_name}',origin_name)
 
+#Responde ao pedido de arquivo de configuração
 @csrf_exempt
 def config(request):
     if request.method == 'POST':
         config = []
-        header = getattr(settings, 'HEADER_CONFIG_FILE')
-        header['header']['config_path'] = header['header']['config_path'].replace('{origin_name}',origin_name)
-        config.append(header)
+        config.append(header(request.POST['origin_name']))
         tranfers = Transfer.objects.get(origin__name=request.POST['origin_name'])
         time = datetime.now()
         time -= timedelta(minutes=time.minute, seconds=time.second, microseconds=time.microseconds)
@@ -68,14 +65,32 @@ def config(request):
                 }
             }
             config.append(c)
-        cf = simplejson.dumps(config)
+        cfg = json.dumps(config)
         f = open(header['header']['config_path'],'w')
-        f.write(cf + '\n')
+        f.write(cfg + '\n')
         f.close()
-        return render_to_response('transfer/index.html')
+        ok = {'OK' : 'OK'}
+        return HttpResponse(json.dumps(ok), mimetype="text/javascript")
     return HttpResponseBadRequest()
 
-#def post_log(request, machine_hash):
-#    if request.method == POST:
-#        return render_to_response('transfer/index.html')
-    
+
+#Recebe o log de uma transferência
+@csrf_exempt
+def post_log(request):
+    if request.method == POST:
+        try:
+            origin = Origin.objects.get(name=request.POST['origin_name'])
+        except Origin.DoesNotExist:
+            error = { 'error' : { 'message' : u'Dados inválidos', } }
+            return HttpResponse(json.dumps(error), mimetype="text/javascript")
+            
+        bkphist = BackupHistory.objects.create(
+            origin=origin,
+            dump_date=datetime(request.POST['dump_date']),
+            files=request.POST['files'],
+            destination=request.POST['destination'],
+            successful = request.POST['successful']
+        )
+        ok = { 'OK' : 'OK'}
+        return HttpResponse(json.dumps(ok), mimetype="text/javascript")
+    return HttpResponseBadRequest()

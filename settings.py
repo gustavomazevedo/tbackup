@@ -1,7 +1,7 @@
 # Django settings for tbbackup project.
 
 from os import environ
-from os.path import dirname, abspath
+import os.path
 
 DEBUG = True
 TEMPLATE_DEBUG = DEBUG
@@ -10,24 +10,15 @@ ADMINS = (
      ('Gustavo Miranda de Azevedo', 'gustavo.m.azevedo@poli.ufrj.br'),
 )
 
-HEADER_CONFIG_FILE = {
-    'header': {
-        'srvtbackup_name' : 'Gruyere - LPS',
-        'srvtbackup_address' : 'gustavo@gruyere.lps.ufrj.br',
-        'admins' : ADMINS,
-        'config_path': '~/tb/tbackup/configs/{origin_name}.cfg',
-    }
-}
-
 MANAGERS = ADMINS
 
-PROJECT_PARENT = dirname(dirname(abspath(__file__))) +'/'
-SRV_SYSUSER = environ['USER']
+HOMEPATH = os.path.expanduser('~')
+PROJECT_PARENT = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) +'/'
 
 DJANGO_SITE_ROOT = PROJECT_PARENT + 'tbackup/'
 DATA_ROOT = PROJECT_PARENT + 'data/tbackup/'
 LOGIN_URL = '/tbackup/accounts/login/'
-#SITE_ROOT = '/~%(sysuser)s/tbackup/' % dict(sysuser=SRV_SYSUSER)
+#SITE_ROOT = '{}/tbackup/'.format(HOMEPATH)
 SITE_ROOT = '127.0.0.1:8000/'
 
 DATABASES = {
@@ -79,7 +70,7 @@ MEDIA_URL = ''
 # Don't put anything in this directory yourself; store your static files
 # in apps' "static/" subdirectories and in STATICFILES_DIRS.
 # Example: "/home/media/media.lawrence.com/static/"
-#STATIC_ROOT = '/home/%(sysuser)s/public_html/tbackup/media/' % dict(sysuser=SRV_SYSUSER)
+#STATIC_ROOT = '{}/public_html/tbackup/media/'.format(HOMEPATH)
 STATIC_ROOT = ''
 
 # URL prefix for static files.
@@ -118,7 +109,8 @@ TEMPLATE_LOADERS = (
 MIDDLEWARE_CLASSES = (
     'django.middleware.common.CommonMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
+#    'django.middleware.csrf.CsrfViewMiddleware',
+    #'django.middleware.csrf.CsrfResponseMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
 )
@@ -129,8 +121,9 @@ TEMPLATE_DIRS = (
     # Put strings here, like "/home/html/django_templates" or "C:/www/django/templates".
     # Always use forward slashes, even on Windows.
     # Don't forget to use absolute paths, not relative paths.
-    DJANGO_SITE_ROOT + 'templates/',
-    
+    os.path.join(DJANGO_SITE_ROOT, 'templates/'),
+    os.path.join(DJANGO_SITE_ROOT, 'bkpagent/templates/'),
+    os.path.join(DJANGO_SITE_ROOT, 'bkpserver/templates/'),
 )
 
 INSTALLED_APPS = (
@@ -140,7 +133,7 @@ INSTALLED_APPS = (
     'django.contrib.sites',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    #'bkpagent',
+    'bkpagent',
     'bkpserver',
     #'logs',
     #'usermachines',

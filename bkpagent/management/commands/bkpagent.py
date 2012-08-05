@@ -13,10 +13,7 @@ import bkpagent as bc
 from bkpagent.models import Server, BackupHistory
 
 
-#projectdir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))) + '/'
-#sys.path.insert(0,projectdir)
 from django.conf import settings
-#projectname = projectdir.split('/')[-2]
 
 
 NO_CHANGES = 0

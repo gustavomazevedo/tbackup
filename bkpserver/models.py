@@ -3,13 +3,9 @@
 from django.db import models
 from django import forms
 from django.forms import widgets
+from django.template.defaultfilters import slugify
 
-TIMEDELTA_CHOICES = (
-    ('h','horas'),
-    ('d','dias'),
-    ('s','semanas'),
-    ('q','quinzenas'),
-)
+from . import TIMEDELTA_CHOICES
 
 class Origin(models.Model):
     u"""
@@ -17,6 +13,7 @@ class Origin(models.Model):
     """
     name = models.CharField(max_length=80, verbose_name='nome')
     sshkey = models.TextField(verbose_name='chave ssh')
+    slug = models.SlugField(max_length=80)
     
     class Meta:
         verbose_name = 'origem'
@@ -25,6 +22,11 @@ class Origin(models.Model):
     
     def __unicode__(self):
         return self.name
+
+    def save(self, *args, **kwargs):
+        if not self.pk:
+            self.slug = slugify(self.name)
+        models.Model.save(self, *args, **kwargs)
 
 class Destination(models.Model):
     u"""
@@ -70,7 +72,7 @@ class BackupHistory(models.Model):
     origin = models.ForeignKey(Origin)
     dump_date = models.DateTimeField(verbose_name='data')
     files = models.TextField(verbose_name='arquivos')
-    destination = models.CharField(verbose_name='destino')
+    destination = models.CharField(verbose_name='destino', max_length='80')
     successful = models.BooleanField(verbose_name='status')
     
     class Meta:
