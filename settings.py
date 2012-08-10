@@ -19,7 +19,8 @@ DJANGO_SITE_ROOT = PROJECT_PARENT + 'tbackup/'
 DATA_ROOT = PROJECT_PARENT + 'data/tbackup/'
 LOGIN_URL = '/tbackup/accounts/login/'
 #SITE_ROOT = '{}/tbackup/'.format(HOMEPATH)
-SITE_ROOT = '127.0.0.1:8000/'
+SITE_ROOT = 'http://gruyere.lps.ufrj.br/~gustavo/tbackup/'
+#SITE_ROOT = '127.0.0.1:8000/'
 
 DATABASES = {
     'default': {
@@ -57,29 +58,29 @@ USE_L10N = True
 
 # Absolute filesystem path to the directory that will hold user-uploaded files.
 # Example: "/home/media/media.lawrence.com/media/"
-#MEDIA_ROOT = DATA_ROOT
-MEDIA_ROOT = ''
+MEDIA_ROOT = DATA_ROOT
+#MEDIA_ROOT = ''
 
 # URL that handles the media served from MEDIA_ROOT. Make sure to use a
 # trailing slash.
 # Examples: "http://media.lawrence.com/media/", "http://example.com/media/"
-#MEDIA_URL = SITE_ROOT + 'custom-media/'
-MEDIA_URL = ''
+MEDIA_URL = SITE_ROOT + 'custom-media/'
+#MEDIA_URL = ''
 
 # Absolute path to the directory static files should be collected to.
 # Don't put anything in this directory yourself; store your static files
 # in apps' "static/" subdirectories and in STATICFILES_DIRS.
 # Example: "/home/media/media.lawrence.com/static/"
-#STATIC_ROOT = '{}/public_html/tbackup/media/'.format(HOMEPATH)
-STATIC_ROOT = ''
+STATIC_ROOT = '{}/public_html/tbackup/media/'.format(HOMEPATH)
+#STATIC_ROOT = ''
 
 # URL prefix for static files.
 # Example: "http://media.lawrence.com/static/"
-#STATIC_URL = SITE_ROOT + 'media/'
-STATIC_URL = '/static/'
+STATIC_URL = SITE_ROOT + 'media/'
+#STATIC_URL = '/static/'
 
-#ADMIN_MEDIA_PREFIX = SITE_ROOT + 'media/'
-ADMIN_MEDIA_PREFIX = '/static/admin/'
+ADMIN_MEDIA_PREFIX = SITE_ROOT + 'media/'
+#ADMIN_MEDIA_PREFIX = '/static/admin/'
 
 # Additional locations of static files
 STATICFILES_DIRS = (
@@ -109,8 +110,7 @@ TEMPLATE_LOADERS = (
 MIDDLEWARE_CLASSES = (
     'django.middleware.common.CommonMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
-#    'django.middleware.csrf.CsrfViewMiddleware',
-    #'django.middleware.csrf.CsrfResponseMiddleware',
+    'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
 )
@@ -133,10 +133,8 @@ INSTALLED_APPS = (
     'django.contrib.sites',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'bkpagent',
+    #'bkpagent',
     'bkpserver',
-    #'logs',
-    #'usermachines',
     # Uncomment the next line to enable the admin:
     'django.contrib.admin',
     # Uncomment the next line to enable admin documentation:

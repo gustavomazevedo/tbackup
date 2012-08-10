@@ -1,6 +1,7 @@
-#!/usr/bin/env python
+#!/home/gustavo/venv/bin/python
 from django.core.management import execute_manager
 import imp
+
 try:
     imp.find_module('settings') # Assumed to be in the same directory.
 except ImportError:

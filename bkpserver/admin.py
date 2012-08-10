@@ -10,20 +10,20 @@ from . import header, HEADER_CONFIG_FILE
 class OriginAdmin(admin.ModelAdmin):
     exclude = ('sshkey',)
     list_filter =('name',)
-    
+
     def has_add_permission(self, request):
         return False
-    
+
     def has_change_permission(self,request):
         return False
-    
-    
+
+
 class DestinationAdmin(admin.ModelAdmin):
     form = DestinationForm
 
 class TransferAdmin(admin.ModelAdmin):
     form = TransferForm
-    
+
     def save_model(self, request, obj, form, change):
         obj.save()
         make_config_file(obj.origin__name)
@@ -33,10 +33,10 @@ def make_config_file(origin_name):
     config = []
     header_dict = header(origin_name)
     config.append(header_dict)
-    
+
     time = datetime.now()
     time -= timedelta(minutes=time.minute, seconds=time.second, microseconds=time.microseconds)
-    
+
     tranfers = Transfer.objects.get(origin__name=origin_name)
     for t in transfers:
         d = t.destination
@@ -54,8 +54,8 @@ def make_config_file(origin_name):
     f.write(cf + '\n')
     f.close()
 
-def authorize_key(pk):
-    
+#def authorize_key(pk):
+
 
 def parse_delta(delta):
     if delta[-1] == 'h':
@@ -69,8 +69,8 @@ def parse_delta(delta):
     elif delta[-1] == 'q':
         fortnights = int(delta[:-1])
         return str(fortnights * 15) + 'd'
-    
-    
+
+
 admin.site.register(Origin, OriginAdmin)
 admin.site.register(Destination, DestinationAdmin)
 admin.site.register(Transfer, TransferAdmin)
