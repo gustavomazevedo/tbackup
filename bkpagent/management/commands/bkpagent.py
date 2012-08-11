@@ -12,9 +12,7 @@ from django.utils import simplejson as json
 import bkpagent as bc
 from bkpagent.models import Server, BackupHistory
 
-
 from django.conf import settings
-
 
 NO_CHANGES = 0
 NO_BACKUP = 1
@@ -39,11 +37,10 @@ class Command(BaseCommand):
             for bconf in backup_configs:
                 destino = bconf['nome_destino']
                 periodicidade = int(bconf['periodicidade'])
-                horario = int(bconf['horario'])
                 last_backup = BackupHistory.objects.latest().dump_date
                 delta = now - last_backup
-
-                if delta.days >= periodicidade and now.hour >= horario:
+                
+                if delta.days >= periodicidade:
                     dumped = dumpdata() if dumped == False
                     execute_backup(bconf)
                     b = BackupHistory.objects.create(dump_date=now)
@@ -56,11 +53,11 @@ class Command(BaseCommand):
 def dumpdata():
     manage = projectdir + 'manage.py'
     installed_apps = settings.INSTALLED_APPS
-    apps = ' '.join([a if not [a.endswith('bkpagent') or a.startswith('django')] for a in installed_apps])
+    apps = ' '.join([a if not a.endswith('bkpagent') or a.startswith('django') for a in installed_apps])
 #    for a in installed_apps:
 #        apps += ' ' + a if not a.endswith('bkpagent')
     
-    cmd = '/usr/bin/python %s dumpdata %s > %s' %
+    cmd = 'python %s dumpdata %s > %s' %
           (manage,apps,self.dumppath)
     stdout, stderr = ba.process(cmd)
     print stderr
