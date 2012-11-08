@@ -8,6 +8,6 @@ admin.autodiscover()
 
 urlpatterns = patterns('bkpagent.views',
     url(r'^register/$', 'register_to_server'),
-    #url(r'^get_header/$', 'get_header'),
+    url(r'^$', 'index'),
     #url(r'^log/(?P<machine_id>)/$', 'post_log'),
 )

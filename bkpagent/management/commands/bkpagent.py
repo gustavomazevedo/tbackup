@@ -1,17 +1,21 @@
 # -*- coding: utf-8 -*-
 
-import time
 import os
 import sys
 import subprocess
 import gzip
+#from cStringIO import StringIO
 from datetime import datetime
-from django.core.management.base import BaseCommand, CommandError
-from django.utils import simplejson as json
-
-from bkpagent.models import Server, BackupHistory, Destination
 
 from django.conf import settings
+from django.core.management import call_command
+from django.core.management.base import BaseCommand, make_option
+from django.db.models import Max
+from django.utils import simplejson as json
+
+import bkpagent
+from bkpagent.models import Client, Server, BackupHistory, Destination
+
 
 PROJECT_DIR = os.path.normpath(os.path.join(os.path.dirname(os.path.realpath(__file__)), '../../../'))
 PROJECT_NAME = PROJECT_DIR.split('/')[-2]
@@ -19,167 +23,191 @@ PROJECT_NAME = PROJECT_DIR.split('/')[-2]
 CONFIG_DIR = os.path.normpath(os.path.join(PROJECT_DIR, 'bkpagent/configs/'))
 DUMP_DIR = os.path.normpath(os.path.join(PROJECT_DIR, 'bkpagent/dumps/'))
 
-NO_CHANGES = 0
-NO_BACKUP = 1
-
 class Command(BaseCommand):
-    help = 'Updates configuration file and sets up backup jobs'
-
-    def handle(self):
-        bkpHandler = BackupHandler()
+    option_list = BaseCommand.option_list + (
+        make_option('--execute_backup', '-e',
+            dest='execute_backup',
+            default=False,
+            help='Sets up backup jobs'),
+        make_option('--update-config', '-u',
+            dest='update_config',
+            default=False,
+            help='Updates configuration file'),
+        make_option('--delete-old-backups', '-d',
+            dest='delete_old_backups',
+            default=False,
+            help='Deletes local backups older than 14 days'),
+        make_option('--check-not-sent', '-c',
+            dest='check_not_sent',
+            default=False,
+            help='Sends pending local backups to remote server')
+        )
+    
+    def handle(self, *args, **options):
+        #Don't accept commands if client is not registered
+        try:
+            Client.objects.get(pk=1)
+        except Client.DoesNotExist:
+            return
         
+        backupHandler = BackupHandler()
+        if options['execute_backup']:
+            backupHandler.execute_backup()
+        elif options['update_config']:
+            backupHandler.update_config()
+        elif options['delete_old_backups']:
+            backupHandler.delete_old_backups()
+        elif options['check_not_sent']:
+            backupHandler.check_not_sent()
         
 
 class BackupHandler():
 
-    def __init__(self):
-        self.update_backup_history()
+    def delete_old_backups(self):
+        fourteen_days_ago = datetime.now() - datetime.timedelta(days=14)
+        backuphistory = BackupHistory.objects.filter(
+            local_copy=True,
+            remote_copy=True,
+            dump_date__lt=fourteen_days_ago)
         
-        self.dump_path, self.zip_path = self.get_dump_path()
-        
-        config_file = self.configure()
+        for backup in backuphistory:
+            os.remove(os.path.join(DUMP_DIR, backup.filename))
+            backup.local_copy = False
+            backup.save()
 
-        if not (config_file in (NO_CHANGES,NO_BACKUP)):
-            now = datetime.now()
-            backup_configs = json.load(open(config_file))
+    def update_config(self):
+        try:
+            server = Server.objects.get(pk=1)
+        except Server.DoesNotExist:
+            server = bkpagent.setup_server()
+            
+        cmd = ('rsync -e "ssh -p {0} -l {1}" -avz --delete-excluded {2} {3}'
+               .format(server.port, server.user, server.configpath, CONFIG_DIR))
+            
+        stdout, stderr = self.process(cmd)
+        self.command_log(stdout, stderr)
+    
+    def check_not_sent(self):
+        not_sent = BackupHistory.objects.filter(
+            local_copy=True,
+            remote_copy=False)
+        for backup in not_sent:
+            self.remote_backup(backup)
+            backup.save()
+        
+    def execute_backup(self):
+        
+        now = datetime.now()
+        #self.dump_path, self.zip_path = self.get_dump_path(now)
+        
+        config_file = self.get_config_file()
+
+        if config_file is not None:
+            backup_configs = json.load(config_file)
             #dumped = False
 
             for conf in backup_configs:
                 periodicidade = int(conf['periodicidade'])
-                last_backup = BackupHistory.objects.latest().dump_date
+                key, last_backup = (BackupHistory.objects.get(
+                    destination__name=conf['nome_destino'])
+                    .aggregate(Max('dump_date')))
                 delta = now - last_backup
                 
                 if delta.days >= periodicidade:
-                    b = BackupHistory.objects.create(dump_date=now)
-                    dump_ok = self.dumpdata() #if dumped == False
-                    if dump_ok:
-                        backup_ok = self.execute_backup(conf)
-                        if backup_ok:
-                            b.local_ok = True
-                            b.destination = Destination.objects.get_or_create(name=conf['nome_destino'])
-                            b.destination.full_address = conf['destino'] + ':' + conf['dir']
-                            b.destination.port = conf['port'] 
-                            b.destination.save()
-                            
+                    destination = Destination.objects.get(name=conf['nome_destino'])
+                    b = (BackupHistory.objects.create(
+                        destination=destination,
+                        dump_date=now))
+                    self.local_backup(b)
                     b.save()
-        
-        self.send_backups()
-                    
-    def update_backup_history(self):
-        backuphistory = BackupHistory.objects.filter(local_ok=True)
-        for b in backuphistory:
-            try:
-                f = open(os.path.join(CONFIG_DIR, b.filename),"r")
-                f.close()
-            except:
-                b.local_ok = False
-                b.save()
-        
-    def send_backups(self):        
-        backuphistory = BackupHistory.objects.filter(remote_ok=False)
-        for b in backuphistory:
-            b.remote_ok = transfer_backup(b)
+                    self.remote_backup(b)
+                    b.save()
     
-    def get_dump_path(self):
-        dump_dt = str(datetime.now()).replace(' ','_').replace(':','-')
-        dump_dt = dump_dt[:dump_dt.rfind('.')]
+    def local_backup(self, backup):
+        dt = str(backup.dump_date).replace(' ','_').replace(':','-')
+        self.date = dt[:dt.rfind('.')]
         
-        _dump = '{0}{1}/{2}.json'.format(CONFIG_DIR, PROJECT_NAME, dump_dt)
-        _zip = _dump.replace('.json','db.gz')
+        client = Client.objects.get(pk=1)
+        filename = client.slug + self.date
         
-        return [_dump, _zip]
-    
-    def dumpdata(self):
-        manage = projectdir + 'manage.py'
         installed_apps = settings.INSTALLED_APPS
-        apps = ' '.join([a if not a.endswith('bkpagent') or a.startswith('django') for a in installed_apps])
-        cmd = 'python {0} dumpdata {1} > {2}'.format(manage, apps, self.dump_path)
-        stdout, stderr = self.process(cmd)
-        self.command_log(stdout,stderr)
+        apps = [a for a in installed_apps if not a.startswith('django')]
+               
+        #content = StringIO()
+        #call_command('dumpdata', *apps, stdout=content)
+        call_command('dumpdata', *apps, stdout=open(os.path.join(DUMP_DIR,filename),"w"))
+        #content.seek(0)
         
-        if stderr:
-            return False
-        return True
-
-    def command_log(self, stdout, stderr):
-        with open(os.path.join(CONFIG_DIR,"stdout.txt","a") as f:
-            f.write(stdout + "\n")
-        with open(os.path.join(CONFIG_DIR,"stderr.txt","a") as f:
-            f.write(stderr + "\n")
+        newfilename = filename + 'tar.gz'
         
-    def execute_backup(self, conf):
-        f_in  = open(self.dump_path, 'rb')
-        f_out = gzip.open(self.zip_path,'wb',9)
+        f_in  = open(filename, 'rb')
+        f_out = gzip.open(newfilename,'wb',9)
         
-        try:
-            f_out.writelines(f_in)
-            f_out.close()
-        except:
-            #espaço esgotado, deleta arquivos antigos até que haja espaço suficiente
-            zipped = False
-            while zipped == False:
-                f = self.oldest_file_in_tree(DUMP_DIR)
-                os.remove(f)
-                try:
-                    f_out.writelines(f_in)
-                    f_out.close()
-                    zipped = True
-                    
+        f_out.writelines(f_in)
+        f_out.close()
         f_in.close()
-        f_in.delete()    
+        f_in.delete()
+        os.remove(filename)   
         
-    def oldest_file_in_tree(rootfolder, extension=".db.gz"):
-        return min(
-            (os.path.join(dirname, filename)
-            for dirname, dirnames, filenames in os.walk(rootfolder)
-            for filename in filenames
-            if filename.endswith(extension)),
-            key=lambda fn: os.stat(fn).st_mtime)
+        backup.filename = newfilename
+        backup.local_copy = True
 
-        
-    def transfer_backup(self, d):
-        self.copy_tree(d)
     
-        cmd = 'rsync ssh -p {0} -avz {1} {2}'.format(d.port,self.zip_path,d.full_address)
+    def remote_backup(self, backup):
         
-        stdout, stderr = self.process(cmd)
-        
-        self.command_log(stdout, stderr)
-        #filenamesLog = stdout.split('\n')[1:-4]
-        
-        log = {'error' : stderr, 'output': stdout}
-        #send log to server
-        send_to_server(log)
-
-    def copy_tree(self, d):
-        cmd = 'rsync ssh -p {0} -a -f"+ */" -f"- *" {1} {2}'.format(d.port,os.path.dirname(os.path.dirname(self.zip_path)),d.full_address)
-    
-    def configure(self):
-
-        transfered = get_config_file()
-            
-        #configuration file hasn't changed
-        if transfered is None:
-            return NO_CHANGES
-        if "deleting" in transfered:
-            return NO_BACKUP
-        
-        return os.path.join(CONFIG_DIR,transfered)
-
-    def get_config_file(self)
-        try:
-            server = Server.objects.get(pk=1)
-        except Server.DoesNotExist:
-            server = setup_server()
-            
-        cmd = 'rsync -e "ssh -p {0} -l {1}" -avz --delete-excluded {2} {3}'
-            .format(server.port, server.user, server.configpath, CONFIG_DIR)
-            
-        stdout, stderr = self.process(cmd)
-        self.command_log(stdout, stderr)
+        cmd = ('rsync ssh -p {0} -avz {1} {2}'
+               .format(
+                   backup.destination.port,
+                   backup.filename,
+                   backup.destination.full_address)
+               )
+        stdout, stderr = self._run(cmd)
         
         if stderr:
+            return
+        
+        backup.remote_copy = True    
+    
+    def get_config_file(self):
+        try:
+            client = Client.objects.get(pk=1)
+            return open(os.path.join(CONFIG_DIR,client.slug), "r")
+        except:
             return None
-        return stdout.split('\n')[1]
+    
+    def _run(self, cmd):
+        p = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                                            stderr=subprocess.PIPE,
+                                            shell=True)
+        return p.communicate()
+    
+    #def command_log(self, stdout, stderr):
+    #    with open(os.path.join(CONFIG_DIR,"stdout.txt"),"a") as f:
+    #        f.write(stdout + "\n")
+    #    with open(os.path.join(CONFIG_DIR,"stderr.txt"),"a") as f:
+    #        f.write(stderr + "\n")
 
-
+    #def transfer_backup(self, d):
+    #    self.copy_tree(d)
+    # 
+    #    cmd = 'rsync ssh -p {0} -avz {1} {2}'.format(d.port,self.zip_path,d.full_address)
+    #    
+    #    stdout, stderr = self.process(cmd)
+    #    
+    #    self.command_log(stdout, stderr)
+    #    #filenamesLog = stdout.split('\n')[1:-4]
+    #    
+    #    log = {'error' : stderr, 'output': stdout}
+    #    #send log to server
+    #    self.send_log_to_web_server(log)
+                
+    #def copy_tree(self, d):
+    #    cmd = 'rsync ssh -p {0} -a -f"+ */" -f"- *" {1} {2}'.format(d.port,os.path.dirname(os.path.dirname(self.zip_path)),d.full_address)
+    
+    #def oldest_file_in_tree(self, rootfolder, extension=".db.gz"):
+    #    return min(
+    #        (os.path.join(dirname, filename)
+    #        for dirname, dirnames, filenames in os.walk(rootfolder)
+    #        for filename in filenames
+    #        if filename.endswith(extension)),
+    #        key=lambda fn: os.stat(fn).st_mtime)

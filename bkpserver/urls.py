@@ -10,4 +10,6 @@ urlpatterns = patterns('bkpserver.views',
     url(r'^register/$', 'register'),
     url(r'^get_header/$', 'get_header'),
     url(r'^log/(?P<machine_id>)/$', 'post_log'),
+    url(r'^recover/$','recover'),
+    
 )

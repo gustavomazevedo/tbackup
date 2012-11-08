@@ -2,6 +2,9 @@ from django.conf.urls.defaults import patterns, include, url
 
 # Uncomment the next two lines to enable the admin:
 from django.contrib import admin
+import django_cron
+
+django_cron.autodiscover()
 admin.autodiscover()
 
 urlpatterns = patterns('',
