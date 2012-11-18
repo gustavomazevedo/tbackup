@@ -8,6 +8,7 @@ encoding//bkpagent/models/Client.py=utf-8
 encoding//bkpagent/models/Destination.py=utf-8
 encoding//bkpagent/models/Server.py=utf-8
 encoding//bkpagent/models/__init__.py=utf-8
+encoding//bkpagent/sha1.py=utf-8
 encoding//bkpagent/urls.py=utf-8
 encoding//bkpagent/views/recover.py=utf-8
 encoding//bkpagent/views/views.py=utf-8
