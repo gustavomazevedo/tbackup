@@ -11,7 +11,7 @@ class CheckBackups(Job):
     run_every = 300
 
     def job(self):
-        call_command("tbackup_agent", execute_backup=True)
+        call_command("tbackup_agent", check_backup=True)
 
 class CheckNotSent(Job):
     '''

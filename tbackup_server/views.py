@@ -80,10 +80,10 @@ def retrieve(request):
 @csrf_exempt
 def backup(request):
     if request.method == 'POST':
-        try:
-            origin = Origin.objects.get(pubkey=request.POST['origin_pubkey'])
-        except Origin.DoesNotExist:
-            return HttpResponseBadRequest()
+        #try:
+        #    origin = Origin.objects.get(pubkey=request.POST['origin_pubkey'])
+        #except Origin.DoesNotExist:
+        #    return HttpResponseBadRequest()
         from django.utils import simplejson as json
         from base64 import b64decode
         filename = request.POST['filename']
@@ -95,8 +95,8 @@ def backup(request):
         if sha1sum_client != sha1sum_server:
             message = error(SHA1SUM_MATCH_ERROR)
             return HttpResponse(message, mimetype="text/javascript")
-        
-        message = send_to_destination(filename, decoded_data, origin.name, destination, sha1sum_client)
+        origin_name = request.POST['origin_name']
+        message = send_to_destination(filename, decoded_data, origin_name, destination, sha1sum_client)
         return HttpResponse(json.dumps(message), mimetype="text/javascript")
     return HttpResponseBadRequest()
 

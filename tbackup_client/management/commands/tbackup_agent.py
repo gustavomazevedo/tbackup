@@ -13,8 +13,8 @@ from django.core.management.base import BaseCommand, make_option
 from django.db.models import Max
 from django.utils import simplejson as json
 
-import bkpagent
-from bkpagent.models import Client, Server, BackupHistory, Destination
+import tbackup_client
+from tbackup_client.models import Origin, WebServer, Log, Config, Destination
 
 
 PROJECT_DIR = os.path.normpath(os.path.join(os.path.dirname(os.path.realpath(__file__)), '../../../'))
@@ -25,10 +25,10 @@ DUMP_DIR = os.path.normpath(os.path.join(PROJECT_DIR, 'bkpagent/dumps/'))
 
 class Command(BaseCommand):
     option_list = BaseCommand.option_list + (
-        make_option('--execute_backup', '-e',
-            dest='execute_backup',
+        make_option('--check_backup', '-e',
+            dest='check_backup',
             default=False,
-            help='Sets up backup jobs'),
+            help='Checks up backup jobs and runs when it''s time'),
         make_option('--update-config', '-u',
             dest='update_config',
             default=False,
@@ -44,51 +44,51 @@ class Command(BaseCommand):
         )
     
     def handle(self, *args, **options):
-        #Don't accept commands if client is not registered
+        #Don't accept commands if origin is not registered
         try:
-            Client.objects.get(pk=1)
-        except Client.DoesNotExist:
+            Origin.objects.get(pk=1)
+        except Origin.DoesNotExist:
             return
         
         backupHandler = BackupHandler()
         if options['execute_backup']:
             backupHandler.execute_backup()
-        elif options['update_config']:
-            backupHandler.update_config()
-        elif options['delete_old_backups']:
-            backupHandler.delete_old_backups()
+#        elif options['update_config']:
+#            backupHandler.update_config()
+#        elif options['delete_old_backups']:
+#            backupHandler.delete_old_backups()
         elif options['check_not_sent']:
             backupHandler.check_not_sent()
         
 
 class BackupHandler():
 
-    def delete_old_backups(self):
-        fourteen_days_ago = datetime.now() - datetime.timedelta(days=14)
-        backuphistory = BackupHistory.objects.filter(
-            local_copy=True,
-            remote_copy=True,
-            dump_date__lt=fourteen_days_ago)
-        
-        for backup in backuphistory:
-            os.remove(os.path.join(DUMP_DIR, backup.filename))
-            backup.local_copy = False
-            backup.save()
+#    def delete_old_backups(self):
+#        fourteen_days_ago = datetime.now() - datetime.timedelta(days=14)
+#        backuphistory = Log.objects.filter(
+#            local_copy=True,
+#            remote_copy=True,
+#            dump_date__lt=fourteen_days_ago)
+#        
+#        for backup in backuphistory:
+#            os.remove(os.path.join(DUMP_DIR, backup.filename))
+#            backup.local_copy = False
+#            backup.save()
 
-    def update_config(self):
-        try:
-            server = Server.objects.get(pk=1)
-        except Server.DoesNotExist:
-            server = bkpagent.setup_server()
-            
-        cmd = ('rsync -e "ssh -p {0} -l {1}" -avz --delete-excluded {2} {3}'
-               .format(server.port, server.user, server.configpath, CONFIG_DIR))
-            
-        stdout, stderr = self.process(cmd)
-        self.command_log(stdout, stderr)
+#    def update_config(self):
+#        try:
+#            server = WebServer.objects.get(pk=1)
+#        except WebServer.DoesNotExist:
+#            server = bkpagent.setup_server()
+#            
+#        cmd = ('rsync -e "ssh -p {0} -l {1}" -avz --delete-excluded {2} {3}'
+#               .format(server.port, server.user, server.configpath, CONFIG_DIR))
+#            
+#        stdout, stderr = self.process(cmd)
+#        self.command_log(stdout, stderr)
     
     def check_not_sent(self):
-        not_sent = BackupHistory.objects.filter(
+        not_sent = Log.objects.filter(
             local_copy=True,
             remote_copy=False)
         for backup in not_sent:
@@ -100,43 +100,45 @@ class BackupHandler():
         now = datetime.now()
         #self.dump_path, self.zip_path = self.get_dump_path(now)
         
-        config_file = self.get_config_file()
+        #config_file = self.get_config_file()
 
-        if config_file is not None:
-            backup_configs = json.load(config_file)
+        #if config_file is not None:
+            #backup_configs = json.load(config_file)
             #dumped = False
-
-            for conf in backup_configs:
-                periodicidade = int(conf['periodicidade'])
-                key, last_backup = (BackupHistory.objects.get(
-                    destination__name=conf['nome_destino'])
-                    .aggregate(Max('dump_date')))
+        configs = Config.objects.all()
+        if configs:
+            for config in configs:
+                key, last_backup = (Log.objects.get(
+                    destination__name=config.destination)
+                    .aggregate(Max('date')))
                 delta = now - last_backup
                 
-                if delta.days >= periodicidade:
-                    destination = Destination.objects.get(name=conf['nome_destino'])
-                    b = (BackupHistory.objects.create(
+                if (delta.days * 1440 + delta.minutes > config.interval):
+                    destination = Destination.objects.get(name=config.destination.name)
+                    b = (Log.objects.create(
                         destination=destination,
-                        dump_date=now))
+                        date=now))
                     self.local_backup(b)
                     b.save()
                     self.remote_backup(b)
                     b.save()
     
     def local_backup(self, backup):
+        import cStringIO
         dt = str(backup.dump_date).replace(' ','_').replace(':','-')
         self.date = dt[:dt.rfind('.')]
         
-        client = Client.objects.get(pk=1)
-        filename = client.slug + self.date
+        origin = Origin.objects.get(pk=1)
+        filename = origin.name + self.date
         
         installed_apps = settings.INSTALLED_APPS
         apps = [a for a in installed_apps if not a.startswith('django')]
                
-        #content = StringIO()
-        #call_command('dumpdata', *apps, stdout=content)
-        call_command('dumpdata', *apps, stdout=open(os.path.join(DUMP_DIR,filename),"w"))
-        #content.seek(0)
+        content = cStringIO.StringIO()
+        call_command('dumpdata', *apps, stdout=content)
+        content.seek(0)
+        with open(os.path.join(DUMP_DIR,filename),"wb") as f:
+            f.write(content)
         
         newfilename = filename + 'tar.gz'
         
@@ -154,32 +156,57 @@ class BackupHandler():
 
     
     def remote_backup(self, backup):
-        
-        cmd = ('rsync ssh -p {0} -avz {1} {2}'
-               .format(
-                   backup.destination.port,
-                   backup.filename,
-                   backup.destination.full_address)
-               )
-        stdout, stderr = self._run(cmd)
-        
-        if stderr:
+
+        from base64 import b64encode
+        from Crypto.Hash import SHA
+        sha1 = SHA.new()
+        with open(os.path.join(DUMP_DIR,backup.filename), 'rb') as f:
+            raw_data = str()
+            encoded_string = str()
+            #9KB(9216) block:
+            #- multiple of 16 (2bytes) for sha1 to work in chunks
+            #- multiple of 24 (3bytes) for b64encode to work in chunks 
+            #- near 8KB for optimal sha1 speed
+            for data in iter(lambda: f.read(9216), b''):
+                raw_data += data
+                encoded_string += b64encode(data)
+                sha1.update(data)
+            sha1sum = sha1.hexdigest()
+             
+        message = {
+                   'destination' : 'Gruyere - LPS',
+                   'file' : encoded_string,
+                   'filename' : backup.filename,
+                   #'sha1sum': self.get_sha1sum(raw_data),
+                   'sha1sum': sha1sum,
+                   #'origin_pubkey' : origin_pubkey
+                   'origin_name' : Origin.objects.get(pk=1).name,
+                  }
+        import requests
+        url = "https://gruyere.lps.ufrj.br/~gustavo/tbackup/server/backup/"
+                
+        response = requests.post(url, message, verify=False)
+        if response.status_code != 200:
+            backup.remote_copy = False
+            return
+        if 'error' in response.text:
+            backup.remote_copy = False
             return
         
-        backup.remote_copy = True    
+        backup.remote_copy = True
+
+#    def get_config_file(self):
+#        try:
+#            client = Client.objects.get(pk=1)
+#            return open(os.path.join(CONFIG_DIR,client.slug), "r")
+#        except:
+#            return None
     
-    def get_config_file(self):
-        try:
-            client = Client.objects.get(pk=1)
-            return open(os.path.join(CONFIG_DIR,client.slug), "r")
-        except:
-            return None
-    
-    def _run(self, cmd):
-        p = subprocess.Popen(cmd, stdout=subprocess.PIPE,
-                                            stderr=subprocess.PIPE,
-                                            shell=True)
-        return p.communicate()
+#    def _run(self, cmd):
+#        p = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+#                                            stderr=subprocess.PIPE,
+#                                            shell=True)
+#        return p.communicate()
     
     #def command_log(self, stdout, stderr):
     #    with open(os.path.join(CONFIG_DIR,"stdout.txt"),"a") as f:
