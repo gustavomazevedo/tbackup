@@ -10,7 +10,7 @@ DEBUG = True
 TEMPLATE_DEBUG = DEBUG
 
 ADMINS = (
-     ('Gustavo Miranda de Azevedo', 'gustavo.m.azevedo@poli.ufrj.br'),
+#     ('Gustavo Miranda de Azevedo', 'gustavo.m.azevedo@poli.ufrj.br'),
 )
 
 MANAGERS = ADMINS
@@ -126,6 +126,7 @@ TEMPLATE_DIRS = (
     # Put strings here, like "/home/html/django_templates" or "C:/www/django/templates".
     # Always use forward slashes, even on Windows.
     # Don't forget to use absolute paths, not relative paths.
+    PROJECT_ROOT,
     os.path.join(PROJECT_ROOT, 'templates/'),
     #os.path.join(PROJECT_ROOT, 'bkpagent/templates/'),
     #os.path.join(PROJECT_ROOT, 'bkpserver/templates/'),
@@ -138,13 +139,11 @@ INSTALLED_APPS = (
     'django.contrib.sites',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'bkpagent',
-    'bkpserver',
-    'django_cron',
-    # Uncomment the next line to enable the admin:
+    'tbackup_client',
+    'tbackup_server',
+    #'django_cron',
     'django.contrib.admin',
-    # Uncomment the next line to enable admin documentation:
-    #'django.contrib.admindocs',
+    'django.contrib.admindocs',
 )
 
 # A sample logging configuration. The only tangible logging

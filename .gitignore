@@ -3,3 +3,5 @@
 *.dbfile
 *.sqlite
 *.db
+data/
+*secret.txt
