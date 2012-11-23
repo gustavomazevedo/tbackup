@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+from datetime import datetime
 
 from django.db import models
 
@@ -38,12 +39,17 @@ class WebServer(models.Model):
 class Config(models.Model):
     destination = models.ForeignKey('Destination')
     interval = models.IntegerField(verbose_name='periodicidade')
+    last_backup = models.DateTimeField(default=datetime.now(),verbose_name=u'data do último backup')
 
+class BackupStatus(models.Model):
+    executing = models.BooleanField(default=False)
+    
 class Log(models.Model):
     origin = models.ForeignKey('Origin')
     destination = models.ForeignKey('Destination')
     date = models.DateTimeField(verbose_name='data')
-    filename = models.CharField(max_length=1024, verbose_name='arquivo')  
-    status = models.BooleanField()
+    filename = models.CharField(max_length=1024, verbose_name='arquivo')
+    local_status = models.BooleanField() 
+    remote_status = models.BooleanField()
     
         

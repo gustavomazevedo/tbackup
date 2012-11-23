@@ -3,6 +3,13 @@
 from django_cron import Job
 from django.core.management import call_command
 
+class TestCron(Job):
+    run_every = 60
+    def job(self):
+        from datetime import datetime
+        with open('testcron.txt','a') as f:
+            f.writeline(datetime.now())
+    
 class CheckBackups(Job):
     '''
     Cron Job that checks if there are backups to be made

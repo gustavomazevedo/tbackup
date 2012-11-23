@@ -14,7 +14,7 @@ from django.db.models import Max
 from django.utils import simplejson as json
 
 import tbackup_client
-from tbackup_client.models import Origin, WebServer, Log, Config, Destination
+from tbackup_client.models import Origin, WebServer, Log, Config, Destination, BackupStatus
 
 
 PROJECT_DIR = os.path.normpath(os.path.join(os.path.dirname(os.path.realpath(__file__)), '../../../'))
@@ -25,8 +25,8 @@ DUMP_DIR = os.path.normpath(os.path.join(PROJECT_DIR, 'bkpagent/dumps/'))
 
 class Command(BaseCommand):
     option_list = BaseCommand.option_list + (
-        make_option('--check_backup', '-e',
-            dest='check_backup',
+        make_option('--check_backups', '-e',
+            dest='check_backups',
             default=False,
             help='Checks up backup jobs and runs when it''s time'),
         make_option('--update-config', '-u',
@@ -66,13 +66,13 @@ class BackupHandler():
 #    def delete_old_backups(self):
 #        fourteen_days_ago = datetime.now() - datetime.timedelta(days=14)
 #        backuphistory = Log.objects.filter(
-#            local_copy=True,
-#            remote_copy=True,
+#            local_status=True,
+#            remote_status=True,
 #            dump_date__lt=fourteen_days_ago)
 #        
 #        for backup in backuphistory:
 #            os.remove(os.path.join(DUMP_DIR, backup.filename))
-#            backup.local_copy = False
+#            backup.local_status = False
 #            backup.save()
 
 #    def update_config(self):
@@ -89,13 +89,23 @@ class BackupHandler():
     
     def check_not_sent(self):
         not_sent = Log.objects.filter(
-            local_copy=True,
-            remote_copy=False)
+            local_status=True,
+            remote_status=False)
         for backup in not_sent:
             self.remote_backup(backup)
             backup.save()
         
-    def execute_backup(self):
+    def check_backups(self):
+        
+        status = BackupStatus.objects.get_or_create(pk=1)
+        if status.executing:
+            return
+        status.executing = True
+
+        try:
+            status.save()
+        except:
+            return
         
         now = datetime.now()
         #self.dump_path, self.zip_path = self.get_dump_path(now)
@@ -106,26 +116,27 @@ class BackupHandler():
             #backup_configs = json.load(config_file)
             #dumped = False
         configs = Config.objects.all()
-        if configs:
-            for config in configs:
-                key, last_backup = (Log.objects.get(
-                    destination__name=config.destination)
-                    .aggregate(Max('date')))
-                delta = now - last_backup
+        for config in configs:
+            delta = now - config.last_backup
+            if (delta.minutes + 1440 * delta.days) > config.interval:
+                config.last_backup = now
+                config.save()
+                destination = Destination.objects.get(name=config.destination.name)
+                log = Log.objects.create(
+                                          destination=destination,
+                                          date=now)
+                self.local_backup(config, log)
+                log.save()
+                self.remote_backup(config, log)
+                log.save()
                 
-                if (delta.days * 1440 + delta.minutes > config.interval):
-                    destination = Destination.objects.get(name=config.destination.name)
-                    b = (Log.objects.create(
-                        destination=destination,
-                        date=now))
-                    self.local_backup(b)
-                    b.save()
-                    self.remote_backup(b)
-                    b.save()
-    
-    def local_backup(self, backup):
+        
+        status.executing = False
+        status.save()
+        
+    def local_backup(self, config, log):
         import cStringIO
-        dt = str(backup.dump_date).replace(' ','_').replace(':','-')
+        dt = str(config.last_backup).replace(' ','_').replace(':','-')
         self.date = dt[:dt.rfind('.')]
         
         origin = Origin.objects.get(pk=1)
@@ -137,7 +148,7 @@ class BackupHandler():
         content = cStringIO.StringIO()
         call_command('dumpdata', *apps, stdout=content)
         content.seek(0)
-        with open(os.path.join(DUMP_DIR,filename),"wb") as f:
+        with open(os.path.join(DUMP_DIR,filename),"w") as f:
             f.write(content)
         
         newfilename = filename + 'tar.gz'
@@ -149,18 +160,18 @@ class BackupHandler():
         f_out.close()
         f_in.close()
         f_in.delete()
-        os.remove(filename)   
+        os.remove(filename)
         
-        backup.filename = newfilename
-        backup.local_copy = True
+        log.filename = newfilename
+        log.local_status = True
 
     
-    def remote_backup(self, backup):
+    def remote_backup(self, config, log):
 
         from base64 import b64encode
         from Crypto.Hash import SHA
         sha1 = SHA.new()
-        with open(os.path.join(DUMP_DIR,backup.filename), 'rb') as f:
+        with open(os.path.join(DUMP_DIR,log.filename), 'rb') as f:
             raw_data = str()
             encoded_string = str()
             #9KB(9216) block:
@@ -176,7 +187,7 @@ class BackupHandler():
         message = {
                    'destination' : 'Gruyere - LPS',
                    'file' : encoded_string,
-                   'filename' : backup.filename,
+                   'filename' : log.filename,
                    #'sha1sum': self.get_sha1sum(raw_data),
                    'sha1sum': sha1sum,
                    #'origin_pubkey' : origin_pubkey
@@ -187,13 +198,13 @@ class BackupHandler():
                 
         response = requests.post(url, message, verify=False)
         if response.status_code != 200:
-            backup.remote_copy = False
+            log.remote_status = False
             return
         if 'error' in response.text:
-            backup.remote_copy = False
+            log.remote_status = False
             return
         
-        backup.remote_copy = True
+        log.remote_status = True
 
 #    def get_config_file(self):
 #        try:
