@@ -2,7 +2,7 @@
 
 #import os.path
 
-import bz2
+#import bz2
 #
 #
 #from datetime import datetime, timedelta
