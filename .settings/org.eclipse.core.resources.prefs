@@ -17,6 +17,7 @@ encoding//bkpserver/admin.py=utf-8
 encoding//bkpserver/models.py=utf-8
 encoding//bkpserver/urls.py=utf-8
 encoding//bkpserver/views.py=utf-8
+encoding//tbackup_client/admin.py=utf-8
 encoding//tbackup_client/cron.py=utf-8
 encoding//tbackup_client/management/commands/tbackup_agent.py=utf-8
 encoding//tbackup_client/models.py=utf-8
