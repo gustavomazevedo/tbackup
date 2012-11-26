@@ -9,7 +9,7 @@ class Destination(models.Model):
     name = models.CharField(max_length=80, verbose_name='nome')
     islocal = models.BooleanField(verbose_name='local')
     address = models.CharField(max_length=1024, verbose_name=u'endereço')    
-    port = models.CharField(max_length=5, verbose_name='porta')
+    port = models.CharField(max_length=5, blank=True, verbose_name='porta')
 
     class Meta:
         verbose_name = 'destino'
@@ -38,15 +38,12 @@ class WebServer(models.Model):
 class ConfigHistory(models.Model):
     pass
 
-class LogHistory(models.Model):
+class Log(models.Model):
     origin = models.ForeignKey('Origin')
     destination = models.CharField(max_length=80, verbose_name='destino')
     date = models.DateTimeField(verbose_name='data')
     filename = models.CharField(max_length=1024, verbose_name='arquivo')  
     status = models.BooleanField()
-    
-    class Meta:
-        verbose_name = 'log'
 
 
 #class Transfer(models.Model):

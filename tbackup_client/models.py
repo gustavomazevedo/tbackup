@@ -32,6 +32,7 @@ class Origin(models.Model):
 class WebServer(models.Model):
     name = models.CharField(max_length=80, verbose_name='nome')
     pubkey = models.TextField(verbose_name = u'chave pública')
+    url = models.CharField(max_length=1024)
     
     def __unicode__(self):
         return self.name
@@ -45,7 +46,7 @@ class BackupStatus(models.Model):
     executing = models.BooleanField(default=False)
     
 class Log(models.Model):
-    origin = models.ForeignKey('Origin')
+    #origin = models.ForeignKey('Origin')
     destination = models.ForeignKey('Destination')
     date = models.DateTimeField(verbose_name='data')
     filename = models.CharField(max_length=1024, verbose_name='arquivo')

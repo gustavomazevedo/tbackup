@@ -39,7 +39,7 @@ polling_frequency = getattr(settings, "CRON_POLLING_FREQUENCY", 300)
 class Job(object):
 	# 86400 seconds == 24 hours
 	run_every = 86400
-
+	
 	def run(self, *args, **kwargs):  
 		self.job()
 		cron_done.send(sender=self, *args, **kwargs)
@@ -75,6 +75,7 @@ class CronScheduler(object):
 		"""
 		status, created = models.Cron.objects.get_or_create(pk=1)
 		
+		print status.executing
 		# This is important for 2 reasons:
 		#     1. It keeps us for running more than one instance of the
 		#        same job at a time
@@ -97,24 +98,29 @@ class CronScheduler(object):
 			
 		jobs = models.Job.objects.all()
 		for job in jobs:
-			if job.queued:
-				time_delta = datetime.now() - job.last_run
-				if (time_delta.seconds + 86400*time_delta.days) > job.run_frequency:
-					inst = cPickle.loads(str(job.instance))
-					args = cPickle.loads(str(job.args))
-					kwargs = cPickle.loads(str(job.kwargs))
+			print job.name
+			time_delta = datetime.now() - job.last_run
+			print job.last_run
+			print time_delta
+			print job.run_frequency
+			if (time_delta.seconds + 86400*time_delta.days) > job.run_frequency:
+				inst = cPickle.loads(str(job.instance))
+				args = cPickle.loads(str(job.args))
+				kwargs = cPickle.loads(str(job.kwargs))
+				
+				try:
+					inst.run(*args, **kwargs)
+					print 'rodou :)'
+					job.last_run = datetime.now()
+					job.save()
 					
-					try:
-						inst.run(*args, **kwargs)
-						job.last_run = datetime.now()
-						job.save()
-						
-					except Exception:
-						# if the job throws an error, just remove it from
-						# the queue. That way we can find/fix the error and
-						# requeue the job manually
-						job.queued = False
-						job.save()
+				except Exception:
+					print 'nao deu :('
+					import traceback
+					traceback.print_exc()
+					status.executing = False
+					status.save()
+					
 
 		status.executing = False
 		status.save()

@@ -36,16 +36,33 @@ def name_available(request):
 #Registra a máquina remota no servidor
 @csrf_exempt
 def register(request):
+    print 'server: recebi request.'
     if request.method == 'POST':
+        print 'server: é um POST'
         from django.utils import simplejson as json
         try:
+            print 'server: criando origin...'
+            print request.POST
+            request_values = json.loads(request.POST['value'])
+            print request_values
+            print 'server: name %s' % request_values['origin_name']
+            print 'server: pubkey %s' % request_values['origin_pubkey']
             Origin.objects.create(
-                name=request.POST['origin_name'],
-                pubkey=request.POST['origin_pubkey'])
+                name=request_values['origin_name'],
+                pubkey=request_values['origin_pubkey'])
+            print 'server: cadastrou no banco'
             webserver_pubkey = get_webserver_pubkey()
-            message = { 'webserver_pubkey' : webserver_pubkey, }
+            print 'server: cadastrou webserver'
+            print 'server: server_pubkey %s' % webserver_pubkey
+            server_info = {'webserver_name' : 'SERVIDOR GRUYERE',
+                           'webserver_pubkey' : webserver_pubkey}
+            message = {'error' : False, 
+                       'value' : json.dumps(server_info)}
+            print 'server: criado com sucesso!'
         except:
-            message = { 'error' : { 'message' : u'Dados inválidos', } }
+            print 'server: falha na criação!'
+            message = { 'error' : True,
+                        'value' : u'Dados inválidos'}
         
         message = json.dumps(message)
         return HttpResponse(message,mimetype="text/javascript")        
@@ -66,13 +83,14 @@ def get_webserver_pubkey():
 
 @csrf_exempt
 def retrieve(request):
+    print 'server: recebi request'
     if request.method == 'GET':
+        print 'server: é um GET'
         from django.utils import simplejson as json
         from tbackup_server.models import Destination
-        return HttpResponse(
-                   json.dumps(
-                       list(Destination.objects.values_list(
-                           'name', flat=True))))
+        list_dests = list(Destination.objects.values_list('name', flat=True))
+        print 'server: lista de dests - %s' % str(list_dests)
+        return HttpResponse(json.dumps(list_dests))
     return HttpResponseBadRequest()    
         
 
@@ -84,18 +102,37 @@ def backup(request):
         #except Origin.DoesNotExist:
         #    return HttpResponseBadRequest()
         from django.utils import simplejson as json
-        from base64 import b64decode
-        filename = request.POST['filename']
-        destination = request.POST['destination']
-        decoded_data = b64decode(request.POST['file'])
-        sha1sum_client = request.POST['sha1sum']
-        sha1sum_server = get_sha1sum(decoded_data)
+        from base64 import b64encode, b64decode
+        print 'é um post'
+        print request
+        print request.FILES['file']
+        print request.POST
+        request_values = json.loads(request.POST['value'])
+        print request_values
+        #filename = request_values['filename']
+        #print filename
+        destination = request_values['destination']
+        print destination
+        #decoded_data = b64decode(request.POST['value']['file'])
+        sha1sum_client = request_values['sha1sum']
+        #sha1sum_server = get_sha1sum(decoded_data)
+        from Crypto.Hash import SHA
+        sha1 = SHA.new()
+        i=0
+        print 'server:'
+        for chunk in request.FILES['file'].chunks():
+            print 'chunk %i' %i
+            i+=1
+            sha1.update(chunk)
+            
+        sha1sum_server = sha1.hexdigest()
         print 'sha1_server = ' + sha1sum_server
         if sha1sum_client != sha1sum_server:
             message = error(SHA1SUM_MATCH_ERROR)
             return HttpResponse(message, mimetype="text/javascript")
-        origin_name = request.POST['origin_name']
-        message = send_to_destination(filename, decoded_data, origin_name, destination, sha1sum_client)
+        origin_name = request_values['origin_name']
+        print origin_name
+        message = send_to_destination(request.FILES['file'], origin_name, destination, sha1sum_client)
         return HttpResponse(json.dumps(message), mimetype="text/javascript")
     return HttpResponseBadRequest()
 
@@ -111,17 +148,27 @@ def get_sha1sum(string_data):
     sha1.update(string_data)
     return sha1.hexdigest()
 
-def send_to_destination(filename, decoded_data, origin_name, destination, sha1sum):
+def send_to_destination(file_content, origin_name, destination, sha1sum):
+    print file_content
+    print type(file_content)
+    print origin_name
+    print destination
+    print sha1sum
     from tbackup_server.models import Destination
     dest = Destination.objects.get(name=destination) #sempre existirá
-
+    print dest
     if dest.islocal:
+        print 'é local'
         from os import path, makedirs
-        dir = path.join(dest.address,origin_name)
-        if not path.exists(dir):
-            makedirs(dir)
-        with open(path.join(dir,filename), 'w') as f:
-            f.write(decoded_data)
+        directory = path.join(dest.address,origin_name)
+        print directory
+        if not path.exists(directory):
+            print 'caminho não existe'
+            makedirs(directory)
+            print 'caminho criado'
+        with open(path.join(directory,file_content.name), 'w') as f:
+            for chunk in file_content.chunks():
+                f.write(chunk)
     else:
         pass
                 

@@ -6,10 +6,10 @@ from django import forms
 from tbackup_client.models import Config
 
 INTERVALTYPE_CHOICES = (
-                        (60, 'horas'),
-                        (1440,'dias'),
-                        (10080,'semanas'),
-                        (21600,'quinzenas'),
+                        (3600, 'horas'),
+                        (86400,'dias'),
+                        (604800,'semanas'),
+                        (1296000,'quinzenas'),
                     )
 
 class TimedeltaWidget(widgets.MultiWidget):
@@ -62,6 +62,7 @@ class ConfigForm(forms.ModelForm):
 
     class Meta:
         model = Config
+        exclude = ('last_backup',)
         
 class RegisterForm(forms.Form):
     origin_name = forms.RegexField(
