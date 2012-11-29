@@ -160,7 +160,7 @@ class BackupHandler():
         call_command('dumpdata', *apps, stdout=f)
         f.close()
                 
-        newfilename = filename + 'db.gz'
+        newfilename = filename + '.db.gz'
         
         f_in  = open(os.path.join(DUMP_DIR,filename), 'rb')
         f_out = gzip.open(os.path.join(DUMP_DIR,newfilename),'wb',9)

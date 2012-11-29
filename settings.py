@@ -26,9 +26,7 @@ LOGIN_URL = '/tbackup/accounts/login/'
 SITE_ROOT = '127.0.0.1:8000/'
 
 sys.path.insert(0, os.path.join(PROJECT_ROOT, "django_cron"))
-CRON_POLLING_FREQUENCY = 10
-
-print sys.path
+CRON_POLLING_FREQUENCY = 60
 
 DATABASES = {
     'default': {

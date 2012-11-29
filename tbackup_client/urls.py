@@ -11,8 +11,5 @@ urlpatterns = patterns('tbackup_client.views',
     url(r'^register/$', 'register'),
     url(r'^log/$','log'),
     url(r'^config/$','config'),
-    #url(r'^api/name_available/$','name_available'),
-    #url(r'^get_header/$', 'get_header'),
-    #url(r'^log/(?P<machine_id>)/$', 'post_log'),
     #url(r'^recover/$','recover'),
 )

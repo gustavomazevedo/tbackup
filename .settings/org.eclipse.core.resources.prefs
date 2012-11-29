@@ -28,5 +28,6 @@ encoding//tbackup_client/management/commands/tbackup_agent.py=utf-8
 encoding//tbackup_client/models.py=utf-8
 encoding//tbackup_client/urls.py=utf-8
 encoding//tbackup_client/views.py=utf-8
+encoding//tbackup_client/webserver_fixture.py=utf-8
 encoding//tbackup_server/tests.py=utf-8
 encoding//tbackup_server/views.py=utf-8

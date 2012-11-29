@@ -89,11 +89,6 @@ def register(request):
                   'formDescription' : u'Digite um nome para cadastrar este sistema no servidor',
                 })
 
-
-def log(request):
-    pass
-
-
 def config(request):
     from tbackup_client.models import Config
     from tbackup_client.models import Destination
@@ -122,3 +117,31 @@ def config(request):
               'formTitle' :u'Agendamento de Cópia de Segurança',
               'formDescription' : u'Cadastre o destino e a periodicidade da cópia',
             })
+
+def log(request):
+    from django.http import HttpResponseBadRequest
+    if request.method == 'GET':
+        from django.shortcuts import render_to_response
+        from tbackup_client.models import Log
+        
+        infoMap = {}
+        infoMap['title'] = u'Histórico'
+        logList = Log.objects.all().order_by('-date')
+        if len(logList) == 0:
+            infoMap['tableTitle'] = u'Não há nenhum log registrado!'
+        else:
+            infoMap['tableTitle'] = u'Lista de Logs Realizados'
+            fieldnamesList = filter(lambda x: x!= 'id',logList[0]._meta.get_all_field_names())
+            fieldsList = []
+            for fn in fieldnamesList:
+                fieldsList.append(logList[0]._meta.get_field_by_name(fn)[0])
+                
+            #fieldsList.append('Restaurar?')
+            infoList = []
+            for b in logList:
+                infoList.append([getattr(b, "%s" % f.name) for f in fieldsList])
+            infoMap['logList'] = infoList
+            infoMap['fieldsList'] = fieldsList
+            
+        return render_to_response('logs/index.html', infoMap)
+    return HttpResponseBadRequest()

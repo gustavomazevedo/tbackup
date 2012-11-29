@@ -3,28 +3,26 @@
 from django.forms import widgets
 from django import forms
 
-from tbackup_client.models import Config
-
-INTERVALTYPE_CHOICES = (
-                        (3600, 'horas'),
-                        (86400,'dias'),
-                        (604800,'semanas'),
-                        (1296000,'quinzenas'),
-                    )
+TIMEDELTA_CHOICES = (
+    (3600, 'horas'),
+    (86400,'dias'),
+    (604800,'semanas'),
+    (1296000,'quinzenas'),
+)
 
 class TimedeltaWidget(widgets.MultiWidget):
     def __init__(self, attrs=None):
         widget = (
             widgets.TextInput(attrs={'size': 3, 'maxlength': 3}),
-            widgets.Select(choices=INTERVALTYPE_CHOICES),
+            widgets.Select(choices=TIMEDELTA_CHOICES),
             )
         super(TimedeltaWidget, self).__init__(widget, attrs=attrs)
         
     def decompress(self, value):
         if value:
-            for div, name in reversed(INTERVALTYPE_CHOICES):
+            for div, name in reversed(TIMEDELTA_CHOICES):
                 if value % div == 0:
-                    return [value / div, name]
+                    return [str(value / div), str(div)]
         return [None, None]
     
     def format_output(self, rendered_widgets):
@@ -36,38 +34,46 @@ class TimedeltaFormField(forms.MultiValueField):
     def __init__(self, *args, **kwargs):
         fields = (
             forms.IntegerField(),
-            forms.ChoiceField(choices=INTERVALTYPE_CHOICES),
+            forms.ChoiceField(choices=TIMEDELTA_CHOICES),
         )
         super(TimedeltaFormField, self).__init__(fields, *args, **kwargs)
 
     def compress(self, data_list):
         if data_list:
-            return data_list[0] * data_list[1]
-        return ''
-
-#class AlfaNumericFormField(forms.CharField):
-#    def clean(self, value):
-#        import re
-#        from django.forms import ValidationError
-#        value = super(AlfaNumericFormField, self).clean(value)
-#        if not re.match(r'^[A-Za-z][A-Za-z0-9_.]+', value):
-#            raise ValidationError(u'Primeiro dígito deve ser letra, subsequentes podem ser alfanuméricos e os símbolos "_" (underscore) e "." (ponto)')
+            vals = self._check_values(data_list)
+            return vals[0] * vals[1]
+        return None
+    
+    def _check_values(self, values):
+        try:
+            vals = [int(values[0]), int(values[1])]
+            return vals
+        except ValueError:
+            raise forms.ValidationError(u'Este campo deve receber um número inteiro')
         
 class ConfigForm(forms.ModelForm):
-    def __init__(self, *args, **kwargs):
-        super(ConfigForm, self).__init__(*args, **kwargs)
-        self.fields['interval'] = TimedeltaFormField(
-                                label=self.fields['interval'].label,
-                                *args, **kwargs)
-
+    interval = TimedeltaFormField()
+    
     class Meta:
-        model = Config
         exclude = ('last_backup',)
         
-class RegisterForm(forms.Form):
-    origin_name = forms.RegexField(
+class RegisterForm(forms.ModelForm):
+    name = forms.RegexField(
 	    max_length=80,
-		label=u'ID', 
+        label='Nome',
 		regex=r'^[A-Za-z][A-Za-z0-9_.]*',
-		error_message=u'Primeiro caractere deve ser obrigatoriamente uma letra.\n' +
-					  u'Subsequentes podem ser alfanuméricos, ou os símbolos _ e .')
+		error_message=u'Somente caracteres alfanuméricos e símbolos "_" e ".". \n'
+                      u'Primeiro caractere é obrigatoriamente uma letra.')
+    
+    def __init__(self, *args, **kwargs):
+        super(RegisterForm, self).__init__(*args, **kwargs)
+        instance = getattr(self, 'instance', None)
+        if instance and instance.id:
+            self.fields['name'].widget.attrs['disabled'] = True
+    
+        def clean_name(self):
+            return self.instance.name
+    
+    class Meta:
+        exclude = ('pvtkey','pubkey',)
+    

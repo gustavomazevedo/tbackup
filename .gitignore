@@ -7,3 +7,4 @@ data/
 *secret.txt
 *testcron.txt
 */dumps/*
+client.json

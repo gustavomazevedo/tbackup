@@ -23,7 +23,7 @@ class Origin(models.Model):
     
     class Meta:
         verbose_name = 'origem'
-        verbose_name_plural = 'origens'
+        verbose_name_plural = 'origem'
         ordering = ['name']
     
     def __unicode__(self):
