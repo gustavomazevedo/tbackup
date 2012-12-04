@@ -98,12 +98,8 @@ class CronScheduler(object):
 			
 		jobs = models.Job.objects.all()
 		for job in jobs:
-			print job.name
 			time_delta = datetime.now() - job.last_run
-			print job.last_run
-			print time_delta
-			print job.run_frequency
-			if (time_delta.seconds + 86400*time_delta.days) > job.run_frequency:
+			if (time_delta.seconds + 86400*time_delta.days) >= job.run_frequency:
 				inst = cPickle.loads(str(job.instance))
 				args = cPickle.loads(str(job.args))
 				kwargs = cPickle.loads(str(job.kwargs))
@@ -113,9 +109,8 @@ class CronScheduler(object):
 					print 'rodou :)'
 					job.last_run = datetime.now()
 					job.save()
-					
 				except Exception:
-					print 'nao deu :('
+					print 'nao rodou :('
 					import traceback
 					traceback.print_exc()
 					status.executing = False

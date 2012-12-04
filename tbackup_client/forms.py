@@ -77,3 +77,12 @@ class RegisterForm(forms.ModelForm):
     class Meta:
         exclude = ('pvtkey','pubkey',)
     
+class LogForm(forms.ModelForm):
+    
+    def __init__(self, *args, **kwargs):
+        super(LogForm, self).__init__(*args, **kwargs)
+        self.fields['destination'].widget.attrs['disabled'] = True
+        self.fields['date'].widget.attrs['disabled'] = True
+        self.fields['filename'].widget.attrs['disabled'] = True
+        self.fields['local_status'].widget.attrs['disabled'] = True
+        self.fields['remote_status'].widget.attrs['disabled'] = True

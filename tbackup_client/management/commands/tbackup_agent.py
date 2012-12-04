@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 
 import os
-import sys
-import subprocess
 import gzip
 #from cStringIO import StringIO
 from datetime import datetime
@@ -10,10 +8,8 @@ from datetime import datetime
 from django.conf import settings
 from django.core.management import call_command
 from django.core.management.base import BaseCommand, make_option
-from django.db.models import Max
 from django.utils import simplejson as json
 
-import tbackup_client
 from tbackup_client.models import Origin, WebServer, Log, Config, Destination, BackupStatus
 
 
@@ -51,13 +47,14 @@ class Command(BaseCommand):
             return
         
         backupHandler = BackupHandler()
-        if options['check_backups']:
+        print options
+        if options.get('check_backups', False):
             backupHandler.check_backups()
 #        elif options['update_config']:
 #            backupHandler.update_config()
 #        elif options['delete_old_backups']:
 #            backupHandler.delete_old_backups()
-        elif options['check_not_sent']:
+        elif options.get('check_not_sent', False):
             backupHandler.check_not_sent()
         
 
@@ -125,18 +122,23 @@ class BackupHandler():
             print config.last_backup
             print delta
             print delta.seconds
-            if (delta.seconds + 86400 * delta.days) > config.interval:
-                config.last_backup = now
-                destination = Destination.objects.get(name=config.destination.name)
-                log = Log.objects.create(
-                                          destination=destination,
-                                          date=now)
-                self.local_backup(config, log)
-                log.save()
-                self.remote_backup(config, log)
-                log.save()
-                config.save()
-                
+            if (delta.seconds + 86400 * delta.days) >= config.interval:
+                try:
+                    config.last_backup = now
+                    destination = Destination.objects.get(name=config.destination.name)
+                    log = Log.objects.create(
+                                              destination=destination,
+                                              date=now)
+                    self.local_backup(config, log)
+                    log.save()
+                    self.remote_backup(log)
+                    log.save()
+                    config.save()
+                except Exception:
+                    import traceback
+                    traceback.print_exc()
+                    status.executing = False
+                    status.save()
         
         status.executing = False
         status.save()
@@ -174,7 +176,7 @@ class BackupHandler():
         log.local_status = True
 
     
-    def remote_backup(self, config, log):
+    def remote_backup(self, log):
 
         #from base64 import b64encode
         from Crypto.Hash import SHA
@@ -209,77 +211,34 @@ class BackupHandler():
         #                 }
         import requests
         
+        ws = WebServer.objects.get(pk=1)
+        url = ws.url + 'tbackup_server/backup/'
         #url = self._resolve_url('/a/creative/uploadcreative')
-        url = 'http://127.0.0.1:8080/server/backup/'
+        #url = 'http://127.0.0.1:8080/server/backup/'
         f = open(os.path.join(DUMP_DIR,log.filename), 'rb')
         sha1.update(f.read())
         f.seek(0)
         files = {'file': (log.filename,f)}
-        data = {'destination': 'Gruyere - LPS',
+        data = {'destination': log.destination.name,
                 'sha1sum' : sha1.hexdigest(),
+                'date' : str(log.date),
                 'origin_name' : Origin.objects.get(pk=1).name}
         req_msg = {'error' : 'false', 
                    'encrypted' : 'false', 
                    'key' : 'false',
                    'value' : json.dumps(data)}
         response = requests.post(url, files=files, data=req_msg, verify=False)
-        #url = WebServer.objects.get(pk=1).url + 'backup/'
         
         print 'client:'
         print response.status_code
-        #print response.text
-        #print response.json
-
-        #response = requests.post(url, request_message, verify=False)
+        
         if response.status_code != 200:
             log.remote_status = False
             return
-        if 'error' in response.text:
+        
+        response_text = json.loads(response.text)
+        if response_text['error']:
             log.remote_status = False
             return
         
         log.remote_status = True
-
-#    def get_config_file(self):
-#        try:
-#            client = Client.objects.get(pk=1)
-#            return open(os.path.join(CONFIG_DIR,client.slug), "r")
-#        except:
-#            return None
-    
-#    def _run(self, cmd):
-#        p = subprocess.Popen(cmd, stdout=subprocess.PIPE,
-#                                            stderr=subprocess.PIPE,
-#                                            shell=True)
-#        return p.communicate()
-    
-    #def command_log(self, stdout, stderr):
-    #    with open(os.path.join(CONFIG_DIR,"stdout.txt"),"a") as f:
-    #        f.write(stdout + "\n")
-    #    with open(os.path.join(CONFIG_DIR,"stderr.txt"),"a") as f:
-    #        f.write(stderr + "\n")
-
-    #def transfer_backup(self, d):
-    #    self.copy_tree(d)
-    # 
-    #    cmd = 'rsync ssh -p {0} -avz {1} {2}'.format(d.port,self.zip_path,d.full_address)
-    #    
-    #    stdout, stderr = self.process(cmd)
-    #    
-    #    self.command_log(stdout, stderr)
-    #    #filenamesLog = stdout.split('\n')[1:-4]
-    #    
-    #    log = {'error' : stderr, 'output': stdout}
-    #    #send log to server
-    #    self.send_log_to_web_server(log)
-                
-    #def copy_tree(self, d):
-    #    cmd = 'rsync ssh -p {0} -a -f"+ */" -f"- *" {1} {2}'.format(d.port,os.path.dirname(os.path.dirname(self.zip_path)),d.full_address)
-    
-    #def oldest_file_in_tree(self, rootfolder, extension=".db.gz"):
-    #    return min(
-    #        (os.path.join(dirname, filename)
-    #        for dirname, dirnames, filenames in os.walk(rootfolder)
-    #        for filename in filenames
-    #        if filename.endswith(extension)),
-    #        key=lambda fn: os.stat(fn).st_mtime)

@@ -5,7 +5,7 @@ def run():
     from tbackup_client.models import WebServer
     print 'gravando webserverInfo'
     ws = WebServer.objects.create(name='Gruyere WebServer',
-                                  url='http://127.0.0.1:8080')
+                                  url='https://gruyere.lps.ufrj.br/~gustavo/tbackup_server/')
     print ws.name
     print ws.url
     ws.save()

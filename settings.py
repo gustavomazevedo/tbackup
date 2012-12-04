@@ -22,8 +22,9 @@ PROJECT_ROOT = PROJECT_PARENT + 'tbackup/'
 DATA_ROOT = PROJECT_PARENT + 'tbackup/data/'
 LOGIN_URL = '/tbackup/accounts/login/'
 #SITE_ROOT = '{}/tbackup/'.format(HOMEPATH)
-#SITE_ROOT = 'http://gruyere.lps.ufrj.br/~gustavo/tbackup/'
-SITE_ROOT = '127.0.0.1:8000/'
+SITE_ROOT = 'https://srvupt.hucff.ufrj.br/~gustavo/tbackup_client/'
+#SITE_ROOT = 'https://gruyere.lps.ufrj.br/~gustavo/tbackup_server/'
+#SITE_ROOT = '127.0.0.1:8000/'
 
 sys.path.insert(0, os.path.join(PROJECT_ROOT, "django_cron"))
 CRON_POLLING_FREQUENCY = 60
@@ -78,7 +79,7 @@ MEDIA_URL = SITE_ROOT + 'custom-media/'
 # in apps' "static/" subdirectories and in STATICFILES_DIRS.
 # Example: "/home/media/media.lawrence.com/static/"
 #STATIC_ROOT = '{}/public_html/tbackup/media/'.format(HOMEPATH)
-STATIC_ROOT = ''
+STATIC_ROOT = PROJECT_PARENT + 'tbackup/static/'
 
 # URL prefix for static files.
 # Example: "http://media.lawrence.com/static/"
@@ -145,7 +146,7 @@ INSTALLED_APPS = (
     #'tbackup_server',
     'django_cron',
     'django.contrib.admin',
-    'django.contrib.admindocs',
+    #'django.contrib.admindocs',
 )
 
 # A sample logging configuration. The only tangible logging

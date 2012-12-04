@@ -8,8 +8,8 @@ admin.autodiscover()
 
 urlpatterns = patterns('tbackup_client.views',
     url(r'^$', 'index', name='tbackup-client'),
-    url(r'^register/$', 'register'),
-    url(r'^log/$','log'),
-    url(r'^config/$','config'),
+    #url(r'^register/$', 'register'),
+    #url(r'^log/$','log'),
+    #url(r'^config/$','config'),
     #url(r'^recover/$','recover'),
 )

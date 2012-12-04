@@ -7,8 +7,8 @@ from django.http import HttpResponse
 from django.shortcuts import render_to_response
 from django.utils import simplejson as json
         
-from tbackup_client.models import Config, Origin, Destination, WebServer
-from tbackup_client.forms import ConfigForm, RegisterForm
+from tbackup_client.models import Log, Config, Origin, Destination, WebServer
+from tbackup_client.forms import ConfigForm, RegisterForm, LogForm
 
 class ConfigAdmin(admin.ModelAdmin):
     form = ConfigForm
@@ -27,15 +27,15 @@ class ConfigAdmin(admin.ModelAdmin):
             self._retrieve_destinations()
         return super(ConfigAdmin, self).add_view(request, form_url, extra_context)
     
-    def change_view(self, request, object_id, form_url='', extra_context=None):
+    def change_view(self, request, form_url='', extra_context=None):
         if request.method =='GET':
             self._retrieve_destinations()
-        return super(ConfigAdmin, self).change_view(request, object_id, form_url, extra_context)
+        return super(ConfigAdmin, self).change_view(request, form_url, extra_context)
     
     #quiet method to retrieve list of destinations from WebServer
     def _retrieve_destinations(self):
         ws = WebServer.objects.get(pk=1)
-        url = ws.url + '/server/retrieve/'
+        url = ws.url + 'tbackup_server/retrieve/'
         response = requests.get(url, verify=False)
         if response.status_code == 200:
             for destination in json.loads(response.text):
@@ -79,7 +79,7 @@ class OriginAdmin(admin.ModelAdmin):
 
             #register client in webserver
             ws = WebServer.objects.get(pk=1)
-            url = ws.url + '/server/register/'
+            url = ws.url + 'tbackup_server/register/'
             response = requests.post(url, request_message, verify=False)
             
             if response.status_code != 200:
@@ -96,3 +96,38 @@ class OriginAdmin(admin.ModelAdmin):
         return super(OriginAdmin, self).add_view(request, form_url, extra_context)
     
 admin.site.register(Origin, OriginAdmin)
+
+class LogAdmin(admin.ModelAdmin):
+    form = LogForm
+    
+    list_display = ('filename', 'date', 'destination', 'remote_status', 'restore_link')
+    list_filter = ('destination', 'date', 'remote_status')
+    search_fields = ['=filename', ]
+    
+    change_form_template = 'admin/view_form.djhtml'
+    actions = None
+    
+    fieldsets = [
+        (None, {'fields':()}), 
+        ]
+
+    def __init__(self, *args, **kwargs):
+        super(LogAdmin, self).__init__(*args, **kwargs)
+        self.list_display_links = (None, )
+        
+    def has_add_permission(self, request):
+        return False
+    
+    def has_delete_permission(self, request, obj=None):
+        return False
+    
+    def change_view(self, request, form_url='', extra_context=None):
+        pass
+    
+    def save_model(self):
+        pass
+    
+admin.site.register(Log, LogAdmin)
+
+#class RestoreAdmin(admin.AdminSite):
+    

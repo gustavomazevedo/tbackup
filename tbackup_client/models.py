@@ -53,4 +53,10 @@ class Log(models.Model):
     local_status = models.BooleanField() 
     remote_status = models.BooleanField()
     
-        
+    def restore_link(self):
+        if self.remote_status:
+            return '<a href="/tbackup_client/restore/%s">Restore<img src="/static/img/Refresh.png"/></a>' % self.id
+        return ''
+    restore_link.short_description = 'Restaurar'
+    restore_link.allow_tags = True
+    
