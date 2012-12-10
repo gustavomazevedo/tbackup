@@ -40,6 +40,8 @@ class Command(BaseCommand):
         )
     
     def handle(self, *args, **options):
+        #print "testando handle"
+        #print options
         #Don't accept commands if origin is not registered
         try:
             Origin.objects.get(pk=1)
@@ -47,8 +49,9 @@ class Command(BaseCommand):
             return
         
         backupHandler = BackupHandler()
-        print options
+        #print options
         if options.get('check_backups', False):
+            #print 'entrei em check_backups'
             backupHandler.check_backups()
 #        elif options['update_config']:
 #            backupHandler.update_config()
@@ -92,36 +95,28 @@ class BackupHandler():
             self.remote_backup(log)
             log.save()
         
-    def check_backups(self):
-        
+    def check_backups(self): 
         status = BackupStatus.objects.get_or_create(pk=1)[0]
         #print status.executing
-        #if status.executing:
-        #    return
+        if status.executing:
+            return
         #print status.executing
-        #status.executing = True
+        status.executing = True
 
-        #try:
-        #    status.save()
-        #except:
-        #    return
+        try:
+            status.save()
+        except:
+            return
         
         now = datetime.now()
-        #self.dump_path, self.zip_path = self.get_dump_path(now)
-        
-        #config_file = self.get_config_file()
-
-        #if config_file is not None:
-            #backup_configs = json.load(config_file)
-            #dumped = False
         configs = Config.objects.all()
-        print configs
+        #print configs
         for config in configs:
             delta = now - config.last_backup
-            print now
-            print config.last_backup
-            print delta
-            print delta.seconds
+            #print now
+            #print config.last_backup
+            #print delta
+            #print delta.seconds
             if (delta.seconds + 86400 * delta.days) >= config.interval:
                 try:
                     config.last_backup = now
@@ -153,10 +148,10 @@ class BackupHandler():
         installed_apps = settings.INSTALLED_APPS
         apps = [a for a in installed_apps if (not (a.startswith('django') or a.startswith('tbackup')))]
         
-        print 'client: apps'
-        print apps       
-        print 'FILENAME'
-        print filename
+        #print 'client: apps'
+        #print apps       
+        #print 'FILENAME'
+        #print filename
         
         f = open(os.path.join(DUMP_DIR,filename),"wb")
         call_command('dumpdata', *apps, stdout=f)
@@ -213,6 +208,7 @@ class BackupHandler():
         
         ws = WebServer.objects.get(pk=1)
         url = ws.url + 'tbackup_server/backup/'
+        print url
         #url = self._resolve_url('/a/creative/uploadcreative')
         #url = 'http://127.0.0.1:8080/server/backup/'
         f = open(os.path.join(DUMP_DIR,log.filename), 'rb')
@@ -229,16 +225,21 @@ class BackupHandler():
                    'value' : json.dumps(data)}
         response = requests.post(url, files=files, data=req_msg, verify=False)
         
-        print 'client:'
-        print response.status_code
+        #print 'client:'
+        #print response.status_code
         
         if response.status_code != 200:
+            print 'response error'
+            print response.status_code
             log.remote_status = False
             return
         
         response_text = json.loads(response.text)
-        if response_text['error']:
-            log.remote_status = False
-            return
+        print response_text
+        #if response_text['error']:
+        #    print 'content error'
+        #    print response_text
+        #    log.remote_status = False
+        #    return
         
         log.remote_status = True

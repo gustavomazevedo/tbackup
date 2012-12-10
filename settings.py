@@ -18,21 +18,22 @@ MANAGERS = ADMINS
 HOMEPATH = os.path.expanduser('~')
 PROJECT_PARENT = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) +'/'
 
-PROJECT_ROOT = PROJECT_PARENT + 'tbackup/'
-DATA_ROOT = PROJECT_PARENT + 'tbackup/data/'
-LOGIN_URL = '/tbackup/accounts/login/'
+PROJECT_ROOT = PROJECT_PARENT + 'tbackup_clt/'
+DATA_ROOT = PROJECT_PARENT + 'tbackup_clt/data/'
+LOGIN_URL = '/tbackup_client/accounts/login/'
 #SITE_ROOT = '{}/tbackup/'.format(HOMEPATH)
-SITE_ROOT = 'https://srvupt.hucff.ufrj.br/~gustavo/tbackup_client/'
+#SITE_ROOT = 'https://srvupt.hucff.ufrj.br/~gustavo/tbackup_client/'
+SITE_ROOT = 'https:///gruyere.lps.ufrj.br/~gustavo/tbackup_client/'
 #SITE_ROOT = 'https://gruyere.lps.ufrj.br/~gustavo/tbackup_server/'
 #SITE_ROOT = '127.0.0.1:8000/'
 
-sys.path.insert(0, os.path.join(PROJECT_ROOT, "django_cron"))
-CRON_POLLING_FREQUENCY = 60
+#sys.path.insert(0, os.path.join(PROJECT_ROOT, "django_cron"))
+#CRON_POLLING_FREQUENCY = 60
 
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3', # Add 'postgresql_psycopg2', 'postgresql', 'mysql', 'sqlite3' or 'oracle'.
-        'NAME': DATA_ROOT + 'tbackup.sqlite',                      # Or path to database file if using sqlite3.
+        'NAME': DATA_ROOT + 'tbackup_clt.sqlite',                      # Or path to database file if using sqlite3.
         'USER': '',                      # Not used with sqlite3.
         'PASSWORD': '',                  # Not used with sqlite3.
         'HOST': '',                      # Set to empty string for localhost. Not used with sqlite3.
@@ -71,23 +72,23 @@ MEDIA_ROOT = DATA_ROOT
 # URL that handles the media served from MEDIA_ROOT. Make sure to use a
 # trailing slash.
 # Examples: "http://media.lawrence.com/media/", "http://example.com/media/"
-MEDIA_URL = SITE_ROOT + 'custom-media/'
-#MEDIA_URL = ''
+#MEDIA_URL = SITE_ROOT + 'custom-media/'
+MEDIA_URL = ''
 
 # Absolute path to the directory static files should be collected to.
 # Don't put anything in this directory yourself; store your static files
 # in apps' "static/" subdirectories and in STATICFILES_DIRS.
 # Example: "/home/media/media.lawrence.com/static/"
-#STATIC_ROOT = '{}/public_html/tbackup/media/'.format(HOMEPATH)
-STATIC_ROOT = PROJECT_PARENT + 'tbackup/static/'
+#STATIC_ROOT = '/home/gustavo/public_html/tbackup_client/media/'
+#STATIC_ROOT = PROJECT_PARENT + 'tbackup_clt/static/'
 
 # URL prefix for static files.
 # Example: "http://media.lawrence.com/static/"
-#STATIC_URL = SITE_ROOT + 'media/'
-STATIC_URL = '/static/'
+STATIC_URL = SITE_ROOT + 'media/'
+#STATIC_URL = '/static/'
 
 #ADMIN_MEDIA_PREFIX = SITE_ROOT + 'media/'
-ADMIN_MEDIA_PREFIX = '/static/admin/'
+#ADMIN_MEDIA_PREFIX = '/static/admin/'
 
 # Additional locations of static files
 STATICFILES_DIRS = (
@@ -144,7 +145,7 @@ INSTALLED_APPS = (
     'dummy_app',
     'tbackup_client',
     #'tbackup_server',
-    'django_cron',
+    #'django_cron',
     'django.contrib.admin',
     #'django.contrib.admindocs',
 )

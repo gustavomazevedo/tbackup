@@ -36,7 +36,7 @@ def name_available(request):
 #Registra a máquina remota no servidor
 @csrf_exempt
 def register(request):
-    print 'server: recebi request.'
+    #print 'server: recebi request.'
     if request.method == 'POST':
         #print 'server: é um POST'
         from django.utils import simplejson as json
@@ -62,6 +62,8 @@ def register(request):
             #print 'server: criado com sucesso!'
         except:
             #print 'server: falha na criação!'
+            import traceback
+            traceback.print_exc(file=open('/home/gustavo/errorlog.txt','a'))
             message = { 'error' : True,
                         'value' : u'Dados inválidos'}
         
@@ -69,13 +71,12 @@ def register(request):
         return HttpResponse(message,mimetype="text/javascript")        
     return HttpResponseBadRequest()
 
-def get_webserver_pubkey():
+def get_webserver_pubkey_and_url():
     from Crypto.PublicKey import RSA
     try:
         webserver = WebServer.objects.get(name='SERVIDOR GRUYERE')
     except WebServer.DoesNotExist:
-        webserver = WebServer.objects.create(name='SERVIDOR GRUYERE',
-                                             url='https://gruyere.lps.ufrj.br/~gustavo/tbackup_server/')
+        webserver = WebServer.objects.create(name='SERVIDOR GRUYERE', url='https://gruyere.lps.ufrj.br/~gustavo/tbackup_server/')
         private = RSA.generate(1024)
         public = private.publickey()
         webserver.pvtkey = private.exportKey()
@@ -85,12 +86,12 @@ def get_webserver_pubkey():
 
 @csrf_exempt
 def retrieve(request):
-    print 'server: recebi request'
+    #print 'server: recebi request'
     if request.method == 'GET':
-        print 'server: é um GET'
+        #print 'server: é um GET'
         from django.utils import simplejson as json
         list_dests = list(Destination.objects.values_list('name', flat=True))
-        print 'server: lista de dests - %s' % str(list_dests)
+        #print 'server: lista de dests - %s' % str(list_dests)
         return HttpResponse(json.dumps(list_dests))
     return HttpResponseBadRequest()    
         
@@ -104,31 +105,37 @@ def backup(request):
         #    return HttpResponseBadRequest()
         from django.utils import simplejson as json
         #from base64 import b64encode, b64decode
-        print 'é um post'
+        import logging
+        logging.error(u'é um post')
+        #print 'é um post'
         request_values = json.loads(request.POST['value'])
         #filename = request_values['filename']
         #print filename
+        #logging.warning(filename)
         destination = request_values['destination']
         date = request_values['date']
         #print destination
+        logging.error(destination)
         #decoded_data = b64decode(request.POST['value']['file'])
         sha1sum_client = request_values['sha1sum']
         #sha1sum_server = get_sha1sum(decoded_data)
         from Crypto.Hash import SHA
         sha1 = SHA.new()
         i=0
-        print 'server:'
+        #print 'server:'
         for chunk in request.FILES['file'].chunks():
-            print 'chunk %i' %i
+            #print 'chunk %i' %i
             i+=1
             sha1.update(chunk)
-            
         sha1sum_server = sha1.hexdigest()
+        logging.error(sha1sum_client)
+        logging.error(sha1sum_server)
         if sha1sum_client != sha1sum_server:
             message = error(SHA1SUM_MATCH_ERROR)
             return HttpResponse(message, mimetype="text/javascript")
         origin_name = request_values['origin_name']
-        print origin_name
+        #print origin_name
+        logging.error(origin_name)
         message = send_to_destination(request.FILES['file'], origin_name, destination, date, sha1sum_client)
         return HttpResponse(json.dumps(message), mimetype="text/javascript")
     return HttpResponseBadRequest()
@@ -146,22 +153,25 @@ def get_sha1sum(string_data):
     return sha1.hexdigest()
 
 def send_to_destination(file_content, origin_name, destination, date, sha1sum):
-    print file_content
-    print type(file_content)
-    print origin_name
-    print destination
-    print sha1sum
+    import logging
+    #print file_content
+    #print type(file_content)
+    #print origin_name
+    #print destination
+    #print sha1sum
     dest = Destination.objects.get(name=destination) #sempre existirá
-    print dest
+    logging.error(dest)
+    #print dest
     if dest.islocal:
-        print 'é local'
+        #print 'é local'
         from os import path, makedirs
         directory = path.join(dest.address,origin_name)
-        print directory
+        #print directory
         if not path.exists(directory):
-            print 'caminho não existe'
+            #print 'caminho não existe'
             makedirs(directory)
-            print 'caminho criado'
+            #print 'caminho criado'
+            logging.error('caminho criado')
         with open(path.join(directory,file_content.name), 'w') as f:
             for chunk in file_content.chunks():
                 f.write(chunk)

@@ -36,7 +36,7 @@ class RegisterTest(TestCase):
         response = c.get('/server/retrieve/', 
                          HTTP_X_REQUESTED_WITH='XMLHttpRequest')
         
-        print response
+        #print response
     
     def test_available(self):
         
@@ -55,7 +55,7 @@ class RegisterTest(TestCase):
         c = Client()
         response = c.post('/server/api/name_available/', data,
                           HTTP_X_REQUESTED_WITH='XMLHttpRequest')
-        print response
+        #print response
             
     def test_register(self):
         import bz2
@@ -78,10 +78,10 @@ class RegisterTest(TestCase):
             
         private = RSA.generate(1024, Random.new().read)
         pvtkey = private.exportKey()
-        print pvtkey
+        #print pvtkey
         public = private.publickey()
         pubkey = public.exportKey()
-        print pubkey
+        #print pubkey
         info = {
                 'origin_name' : 'loren ipsum',
                 'origin_pubkey' : pubkey,
@@ -101,40 +101,40 @@ class RegisterTest(TestCase):
         encrypted_request = {'message': EncodeAES(cipher, json.dumps(info)),}
         c = Client()
         response = c.post('/server/register/', encrypted_request)
-        print response.content
+        #print response.content
         content = json.loads(response.content)
-        print content
+        #print content
         msg = content['message']
-        print msg
+        #print msg
         decoded_msg = base64.b64decode(str(msg))
-        print "decoded_msg = " + decoded_msg
+        #print "decoded_msg = " + decoded_msg
         rsa = RSA.importKey(pvtkey)
         deciphered = rsa.decrypt(decoded_msg)
         #deciphered = DecodeRSA(rsa, msg)
-        print "deciphered = " + deciphered
+        #print "deciphered = " + deciphered
         import hashlib
         md5 = hashlib.md5()
         md5.update(pubkey)
-        print "md5 da public key = " + md5.hexdigest()
+        #print "md5 da public key = " + md5.hexdigest()
         
-        print "testing..."
+        #print "testing..."
         word = {"webserver_pubkey": "-----BEGIN PUBLIC KEY-----\nMIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDT/0gTAqriI/iWmTRGpxAydFuX\ngPt1oApPIVsY6igfT4VPHdr6gn3/qruKyEYLl3KydsWZlYvsjlbBVB5VllpYFNNt\nD/blKoyfYtkibQUqbbvy9rHIIm/qQ6c3aUbGIzrF8Rl1RUfNdt8KJ2+14FwEdtpJ\nIQ7NV9tja1otTUjYTQIDAQAB\n-----END PUBLIC KEY-----"}
         word = json.dumps(word)
         word = '{"TESTESTESTESTESTESTESTESTE": "blahblahblah"}'
         word = '{"TESTESTESTESTESTESTESTESTE": "blahblahblah"}'
         word = '{"wow": "890123456789MIGfMAaGPIVsY6igfT4VPHoyfYtkibQUqbbvy9rHIIm/qQ6c3aUbGIzrF8Rl1RUfNdt8KJ2+14FwEdtpJIQ7NV9tja1otTUjYTQIDAQAB"}'
-        print "word = " + word
+        #print "word = " + word
         rsa = RSA.importKey(pubkey)
         ciphered = rsa.encrypt(word, 0)[0]
-        print "ciphered = " + ciphered
+        #print "ciphered = " + ciphered
         cipherb64 = base64.b64encode(ciphered)
-        print "cipherb64 = " + cipherb64
+        #print "cipherb64 = " + cipherb64
         recipher = base64.b64decode(cipherb64)
-        print "recipher = " + recipher
+        #print "recipher = " + recipher
         rsa = RSA.importKey(pvtkey)
         #deciphered = rsa.decrypt(ciphered)
         deciphered = rsa.decrypt(recipher)
-        print "deciphered = " + deciphered
+        #print "deciphered = " + deciphered
         
 class FileTest(TestCase):
     
@@ -174,9 +174,9 @@ class FileTest(TestCase):
             sha1sum = sha1.hexdigest()
             #encoded_string = b64encode(raw_data)
         
-        print 'filename = ' + filename
-        print 'raw_data = ' + raw_data[9000:9010]
-        print 'encoded_string = ' + encoded_string[9000:9010]
+        #print 'filename = ' + filename
+        #print 'raw_data = ' + raw_data[9000:9010]
+        #print 'encoded_string = ' + encoded_string[9000:9010]
            
         message = {
                    'destination' : 'Gruyere - LPS',
@@ -186,13 +186,13 @@ class FileTest(TestCase):
                    'sha1sum': sha1sum,
                    'origin_pubkey' : origin_pubkey
                    }
-        print 'sha1sum = ' + message['sha1sum']
+        #print 'sha1sum = ' + message['sha1sum']
         
         from django.test.client import Client
         c = Client()
-        print 'posting...'
+        #print 'posting...'
         response = c.post('/server/backup/', message)
-        print response.content
+        #print response.content
         
     def get_sha1sum(self, string_data):
         #from hashlib import sha1

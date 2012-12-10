@@ -29,6 +29,7 @@ class Origin(models.Model):
 
 class WebServer(models.Model):
     name = models.CharField(max_length=80, verbose_name='nome')
+    url = models.CharField(max_length=1024)
     pvtkey = models.TextField(verbose_name = 'chave privada')
     pubkey = models.TextField(verbose_name = u'chave pública')
 

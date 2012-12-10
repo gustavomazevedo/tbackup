@@ -27,10 +27,10 @@ class ConfigAdmin(admin.ModelAdmin):
             self._retrieve_destinations()
         return super(ConfigAdmin, self).add_view(request, form_url, extra_context)
     
-    def change_view(self, request, form_url='', extra_context=None):
+    def change_view(self, request,form_url=''):
         if request.method =='GET':
             self._retrieve_destinations()
-        return super(ConfigAdmin, self).change_view(request, form_url, extra_context)
+        return super(ConfigAdmin, self).change_view(request,form_url)
     
     #quiet method to retrieve list of destinations from WebServer
     def _retrieve_destinations(self):
