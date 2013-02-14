@@ -1,0 +1,18 @@
+{% extends "admin/base.html" %}
+{% load i18n %}
+
+
+{% block title %}{{ title }} | Sistema de Controle de Backup{% endblock %}
+
+{% block branding %}
+<h1 id="site-name">Sistema de Controle de Backup</h1>
+{% endblock %}
+
+{% block nav-global %}
+{% endblock %}
+
+{% load url from future %}
+{% block content %}
+<a href="{% url 'home' %}">home</a><br>
+<a href="{% url 'tbackup-client' %}">client</a><br>
+{% endblock %}
