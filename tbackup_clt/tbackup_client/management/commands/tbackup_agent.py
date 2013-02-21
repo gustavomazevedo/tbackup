@@ -3,7 +3,7 @@
 import os
 import gzip
 #from cStringIO import StringIO
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from django.conf import settings
 from django.core.management import call_command
@@ -115,6 +115,7 @@ class BackupHandler():
         status = BackupStatus.objects.get_or_create(pk=1)[0]
         #print status.executing
         if status.executing:
+            status.save()
             return
         #print status.executing
         status.executing = True
@@ -125,6 +126,7 @@ class BackupHandler():
             return
         
         now = datetime.now()
+        now -= timedelta(microseconds=now.microsecond)
         configs = Config.objects.all()
         #print configs
         for config in configs:

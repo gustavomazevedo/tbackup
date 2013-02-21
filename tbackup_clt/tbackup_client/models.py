@@ -55,6 +55,23 @@ class Config(models.Model):
 
 class BackupStatus(models.Model):
     executing = models.BooleanField(default=False)
+    count = models.IntegerField(default=0)
+    
+    def save(self, *args, **kwargs):
+        '''
+        A cada 60 execuções (= 1 hora) que se passam com executing = True,
+        reseta-o para False, para prevenir que uma queda do servidor prenda
+        o status em True indefinidamente.
+        '''
+        if self.executing:
+            self.count += 1
+        else:
+            self.count = 0
+            
+        if self.count >= 60:
+            self.count = 0
+            self.executing = False
+        super(BackupStatus, self).save(*args, **kwargs)
     
 class Log(models.Model):
     #origin = models.ForeignKey('Origin')

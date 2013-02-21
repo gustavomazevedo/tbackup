@@ -21,7 +21,9 @@ def enum(*sequential, **named):
 
 err_codes = enum('DESTINATION_DOES_NOT_EXIST',
                  'MALFORMED_POST',
+                 'NO_FILE_PROVIDED',
                  'NOT_ALLOWED',
+                 'NOT_IMPLEMENTED',
                  'ORIGIN_ALREADY_EXISTS',
                  'ORIGIN_DOES_NOT_EXIST',
                  'SHA1SUM_MATCH_ERROR',
@@ -214,29 +216,65 @@ def get_sha1sum(string_data):
     sha1.update(string_data)
     return sha1.hexdigest()
 
-def send_to_destination(file_content, origin_name, destination, date, sha1sum):
+def send_to_destination(file_content, origin_name, destination_name, date, sha1sum):
     import logging
-    dest = Destination.objects.get(name=destination) #sempre existirá
-    logging.warning(dest)
-    if dest.islocal:
-        from os import path, makedirs
-        directory = path.join(dest.address,origin_name)
-        if not path.exists(directory):
-            makedirs(directory)
+    from datetime import datetime
+    from os import path, makedirs
+    destination = Destination.objects.get(name=destination_name) #sempre existirá
+    logging.warning(destination)
+    client_dir = path.join(destination.directory,origin_name)
+    if destination.islocal:
+        if not path.exists(client_dir):
+            makedirs(client_dir)
             logging.warning('caminho criado')
-        with open(path.join(directory,file_content.name), 'wb') as f:
+        with open(path.join(client_dir,file_content.name), 'wb') as f:
             for chunk in file_content.chunks():
                 f.write(chunk)
-        o = Origin.objects.get(name=origin_name)
-        from datetime import datetime
-        Log.objects.create(origin=o,
-                           destination=destination,
-                           filename=file_content.name,
-                           date=datetime.strptime(date, '%Y-%m-%d %H:%M:%S.%f'),
-                           status=True)
-        return {'success' : {'message' : u'Sucesso.',}}
+        
     else:
-        return {'error' : {'message' : u'Não implementado.',}}
+        import paramiko
+        
+        ws = get_webserver()
+        
+        #ssh = paramiko.SSHClient()
+        #ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        #ssh.connect(destination.address, destination.port, ws.login, pkey=paramiko.PKey.from_private_key(ws.pvtkey))
+        #sftp = ssh.open_sftp()
+        transport = paramiko.Transport((destination.address, destination.port))
+        transport.connect(username = ws.login, pkey=paramiko.PKey.from_private_key(ws.pvtkey))
+        sftp = paramiko.SFTPClient.from_transport(transport)
+        
+        if not sftp_path_exists(sftp,client_dir):
+            sftp.mkdir(client_dir)
+            logging.warning('caminho criado')
+        with sftp.open(path.join(client_dir, file_content.name), 'wb') as f:
+            for chunk in file_content.chunks():
+                f.write(chunk)
+        
+        
+        return error(err_codes.NOT_IMPLEMENTED)
+    o = Origin.objects.get(name=origin_name)
+    Log.objects.create(origin=o,
+                       destination=destination_name,
+                       filename=file_content.name,
+                       date=datetime.strptime(date, '%Y-%m-%d %H:%M:%S.%f'),
+                       status=True)
+    return {'success' : {'message' : u'Sucesso.',}}
+
+def sftp_path_exists(sftp, path):
+    """
+        Verifica se arquivo existe no servidor remoto
+        http://docs.python.org/2/library/errno.html#errno.ENOENT
+    """
+    try:
+        sftp.stat(path)
+    except IOError, e:
+        import errno
+        if e.errno == errno.ENOENT:
+            return False
+        raise
+    else:
+        return True
 
 def retrieve_from_destination(filename, origin_name, destination):
     dest = Destination.objects.get(name=destination)
@@ -254,6 +292,10 @@ def error(code):
         msg = u'POST estruturado incorretamente. Favor consultar documentação da API'
     elif code == err_codes.NO_FILE_PROVIDED:
         msg = u'Arquivo necessário não foi recebido'
+    elif code == err_codes.NOT_ALLOWED:
+        msg = u'Ação não permitida'
+    elif code == err_codes.NOT_IMPLEMENTED:
+        msg = u'Não implementado'
     elif code == err_codes.ORIGIN_ALREADY_EXISTS:
         msg = u'Nome de origem já cadastrado'
     elif code == err_codes.ORIGIN_DOES_NOT_EXIST:

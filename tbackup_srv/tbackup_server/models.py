@@ -7,6 +7,7 @@ class Destination(models.Model):
     islocal = models.BooleanField(verbose_name='local')
     address = models.CharField(max_length=1024, verbose_name=u'endereço')    
     port = models.CharField(max_length=5, blank=True, verbose_name='porta')
+    directory = models.CharField(max_length=1024, verbose_name=u'diretório', default=u'~', blank=True)
 
     class Meta:
         verbose_name = 'destino'
@@ -29,6 +30,7 @@ class Origin(models.Model):
 
 class WebServer(models.Model):
     name = models.CharField(max_length=80, verbose_name='nome')
+    login_ssh = models.CharField(max_length=80, default=u'tbackup')
     url = models.CharField(max_length=1024)
     pvtkey = models.TextField(verbose_name = 'chave privada')
     pubkey = models.TextField(verbose_name = u'chave pública')
